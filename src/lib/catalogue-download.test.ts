@@ -8,9 +8,16 @@ describe("catalogueDownloadSchema", () => {
       lastName: "Dupont",
       company: "Exemple SA",
       email: "marie@example.be",
+      phone: "+32470000000",
       consent: true,
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("requires a phone number", () => {
+    expect(catalogueDownloadSchema.safeParse({
+      firstName: "Marie", lastName: "Dupont", email: "marie@example.be", consent: true,
+    }).success).toBe(false);
   });
 });
