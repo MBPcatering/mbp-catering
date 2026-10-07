@@ -1,17 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getMobileMenuLabel } from "@/lib/mobile-menu";
+import { hasScrolledPastHeader } from "@/lib/header-scroll";
 import { Locale, copy } from "@/lib/site-content";
 
 const destinations = ["/", "/b2b", "/evenements-prives", "/catalogue", "/a-propos", "/contact"];
 
-export function SiteHeader({ locale }: { locale: Locale }) {
+export function SiteHeader({ locale, overlay = false }: { locale: Locale; overlay?: boolean }) {
   const content = copy[locale];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  return <header className="site-header">
+  useEffect(() => {
+    if (!overlay) return;
+
+    const updateHeader = () => setIsScrolled(hasScrolledPastHeader(window.scrollY));
+    updateHeader();
+    window.addEventListener("scroll", updateHeader, { passive: true });
+    return () => window.removeEventListener("scroll", updateHeader);
+  }, [overlay]);
+
+  return <header className={`site-header${overlay ? " site-header-overlay" : ""}${isScrolled ? " is-scrolled" : ""}`}>
     <div className="shell nav-wrap">
       <Link href={`/${locale}`} className="brand" aria-label="MBP Catering">MBP <span>Catering</span><small>{content.tagline}</small></Link>
       <nav className="desktop-nav" aria-label="Navigation principale">{content.nav.map((item, index) => <Link key={item} href={`/${locale}${destinations[index]}`}>{item}</Link>)}</nav>
