@@ -40,4 +40,4 @@ export const copy = {
   },
 } as const;
 
-export const routes = ["b2b", "evenements-prives", "catalogue", "a-propos", "galerie", "faq", "contact", "devis"] as const;
+export const routes = ["b2b", "evenements-prives", "catalogue", "a-propos", "galerie", "faq", "contact", "devis", "confidentialite"] as const;

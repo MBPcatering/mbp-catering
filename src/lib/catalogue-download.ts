@@ -5,7 +5,6 @@ export const catalogueDownloadSchema = z.object({
   lastName: z.string().min(1),
   company: z.string().optional(),
   email: z.string().email(),
-  phone: z.string().min(6),
   consent: z.literal(true),
 });
 

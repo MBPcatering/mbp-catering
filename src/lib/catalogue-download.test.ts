@@ -8,7 +8,6 @@ describe("catalogueDownloadSchema", () => {
       lastName: "Dupont",
       company: "Exemple SA",
       email: "marie@example.be",
-      phone: "+32470000000",
       consent: true,
     });
 
