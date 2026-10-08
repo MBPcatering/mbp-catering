@@ -26,7 +26,7 @@ export function SiteHeader({ locale, overlay = false }: { locale: Locale; overla
     <div className="shell nav-wrap">
       <Link href={`/${locale}`} className="brand" aria-label="MBP Catering">MBP <span>Catering</span><small>{content.tagline}</small></Link>
       <nav className="desktop-nav" aria-label="Navigation principale">{content.nav.map((item, index) => <Link key={item} href={`/${locale}${destinations[index]}`}>{item}</Link>)}</nav>
-      <div className="nav-actions"><div className="language-switch" aria-label="Langue">{(["fr", "nl", "en"] as Locale[]).map((language) => <Link key={language} href={`/${language}`} className={language === locale ? "active" : ""}>{language.toUpperCase()}</Link>)}</div><Link className="button button-small" href={`/${locale}/devis`}>{content.quote}</Link></div>
+      <div className="nav-actions"><Link className="button button-small" href={`/${locale}/devis`}>{content.quote}</Link></div>
       <button className={`mobile-menu-toggle${isMobileMenuOpen ? " is-open" : ""}`} type="button" aria-expanded={isMobileMenuOpen} aria-controls="mobile-menu" aria-label={getMobileMenuLabel(isMobileMenuOpen)} onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}><span /><span /><span /></button>
     </div>
     <nav id="mobile-menu" className={`mobile-menu${isMobileMenuOpen ? " is-open" : ""}`} aria-label="Navigation mobile">
