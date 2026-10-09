@@ -20,5 +20,8 @@ export const quoteRequestSchema = z.object({
 export type QuoteRequest = z.infer<typeof quoteRequestSchema>;
 
 export async function createQuoteRequest(request: QuoteRequest) {
-  return { reference: `MBP-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, request };
+  return {
+    reference: `MBP-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+    request,
+  };
 }

@@ -16,8 +16,13 @@ describe("catalogueDownloadSchema", () => {
   });
 
   it("requires a phone number", () => {
-    expect(catalogueDownloadSchema.safeParse({
-      firstName: "Marie", lastName: "Dupont", email: "marie@example.be", consent: true,
-    }).success).toBe(false);
+    expect(
+      catalogueDownloadSchema.safeParse({
+        firstName: "Marie",
+        lastName: "Dupont",
+        email: "marie@example.be",
+        consent: true,
+      }).success,
+    ).toBe(false);
   });
 });

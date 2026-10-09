@@ -11,7 +11,9 @@ export const catalogueDownloadSchema = z.object({
 
 export type CatalogueDownloadRequest = z.infer<typeof catalogueDownloadSchema>;
 
-export async function createCatalogueDownloadRequest(request: CatalogueDownloadRequest) {
+export async function createCatalogueDownloadRequest(
+  request: CatalogueDownloadRequest,
+) {
   return {
     reference: `CAT-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     request,
