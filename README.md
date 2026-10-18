@@ -23,8 +23,11 @@ Le MVP comprend :
 
 ## Installation
 
+Utilisez Node.js 22.12 ou une version 22 plus récente (Node.js 22.22.3 est fixé dans `.nvmrc`). Vitest 5 ne prend plus en charge Node.js 20. Configurez également la version de Node de l'environnement de build avant de déployer cette mise à jour.
+
 ```bash
-npm install
+nvm use
+npm ci
 npm run dev
 ```
 
