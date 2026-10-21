@@ -1,30 +1,20 @@
-import { Locale, copy } from "@/lib/site-content";
+import { footerCopy, Locale, copy } from "@/lib/site-content";
 import Link from "next/link";
 
-const exploreLinks = [
-  ["Accueil", ""],
-  ["Catering B2B", "/b2b"],
-  ["Événements privés", "/evenements-prives"],
-  ["À propos", "/a-propos"],
-] as const;
-
-const discoverLinks = [
-  ["Le catalogue", "/catalogue"],
-  ["Galerie", "/galerie"],
-  ["Questions fréquentes", "/faq"],
-  ["Demander un devis", "/devis"],
-] as const;
+const explorePaths = ["", "/b2b", "/evenements-prives", "/a-propos"] as const;
+const discoverPaths = ["/catalogue", "/galerie", "/faq", "/devis"] as const;
 
 export function SiteFooter({ locale }: { locale: Locale }) {
   const content = copy[locale];
+  const footer = footerCopy[locale];
 
   return (
     <footer className="site-footer">
       <div className="shell footer-intro">
         <h2>
-          Des tables qui
+          {footer.heading[0]}
           <br />
-          restent en mémoire.
+          {footer.heading[1]}
         </h2>
       </div>
       <div className="shell footer-grid">
@@ -35,15 +25,21 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           </div>
         </div>
         <nav className="footer-links" aria-label="Découvrir MBP Catering">
-          {exploreLinks.map(([label, path]) => (
-            <Link key={path} href={`/${locale}${path}`}>
+          {footer.explore.map((label, index) => (
+            <Link
+              key={explorePaths[index]}
+              href={`/${locale}${explorePaths[index]}`}
+            >
               {label}
             </Link>
           ))}
         </nav>
         <nav className="footer-links" aria-label="Nos informations">
-          {discoverLinks.map(([label, path]) => (
-            <Link key={path} href={`/${locale}${path}`}>
+          {footer.discover.map((label, index) => (
+            <Link
+              key={discoverPaths[index]}
+              href={`/${locale}${discoverPaths[index]}`}
+            >
               {label}
             </Link>
           ))}
@@ -56,7 +52,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           </address>
           <a href="mailto:info@mbpcatering.be">info@mbpcatering.be</a>
           <div className="footer-social">
-            <span>Suivez MBP</span>
+            <span>{footer.social}</span>
             <a
               className="footer-instagram"
               href="https://www.instagram.com/catering.mbp/"
@@ -76,9 +72,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
               </svg>
             </a>
           </div>
-          <Link href={`/${locale}/confidentialite`}>
-            RGPD & confidentialité
-          </Link>
+          <Link href={`/${locale}/confidentialite`}>{footer.privacy}</Link>
         </div>
       </div>
       <div className="shell footer-bottom">

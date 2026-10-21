@@ -843,6 +843,7 @@ a {
 .quote-form {
   background: #fff;
   border: 1px solid rgba(45, 33, 27, 0.14);
+  margin: 0 auto;
   max-width: 900px;
   padding: clamp(25px, 5vw, 60px);
 }

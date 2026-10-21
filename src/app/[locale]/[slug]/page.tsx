@@ -1,104 +1,75 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CatalogueDownloadForm } from "@/components/catalogue-download-form";
 import { QuoteForm } from "@/components/quote-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { CatalogueDownloadForm } from "@/components/catalogue-download-form";
-import { Locale, locales, routes } from "@/lib/site-content";
+import {
+  copy,
+  detailPages,
+  faqCopy,
+  Locale,
+  locales,
+  RouteSlug,
+  routes,
+} from "@/lib/site-content";
 
-const pages: Record<
-  string,
-  { title: string; lead: string; body: string; points: string[] }
-> = {
-  b2b: {
-    title: "Catering B2B, pensé pour votre agenda.",
-    lead: "Des formats souples pour les réunions, séminaires, lunchs d’équipe et dîners de direction.",
-    body: "De la première réunion à la dernière assiette, MBP compose une proposition qui respecte votre timing, vos invités et votre lieu.",
-    points: [
-      "Petits déjeuners et lunchs",
-      "Pains garnis & poké bowls",
-      "Buffets d’entreprise",
-      "Dîners de direction",
-    ],
+const quoteCopy = {
+  fr: {
+    kicker: "Demande de devis",
+    title: "Votre événement commence par quelques bonnes questions.",
+    lead: "Donnez-nous l’essentiel. Votre demande est conçue pour être ensuite enregistrée, suivie et traitée par l’équipe MBP.",
   },
-  "evenements-prives": {
-    title: "Les moments privés ont leur propre rythme.",
-    lead: "Réceptions, anniversaires et repas de famille, imaginés à votre façon.",
-    body: "Partagez-nous l’ambiance et le nombre d’invités. Nous assemblons la formule qui donne à votre table son caractère.",
-    points: [
-      "Réceptions et anniversaires",
-      "Buffets et plats à partager",
-      "Zakouskis & walking dinners",
-      "Options sur mesure",
-    ],
+  nl: {
+    kicker: "Offerte aanvragen",
+    title: "Uw evenement begint met enkele goede vragen.",
+    lead: "Geef ons de essentie. Uw aanvraag is ontworpen om vervolgens door het MBP-team geregistreerd, opgevolgd en behandeld te worden.",
   },
-  catalogue: {
-    title: "Le catalogue MBP, votre point de départ.",
-    lead: "Notre sélection 2026-2027 réunit les grandes formules qui font notre cuisine.",
-    body: "Plutôt que de multiplier les pages, nous gardons le catalogue comme référence vivante. Il vous aide à vous projeter ; l’équipe MBP vous aide à choisir.",
-    points: [
-      "Zakouskis chauds et froids",
-      "Pains garnis classique et premium",
-      "Buffets Healthy, Libanais, Italien, Méditerranéen et plus",
-      "Desserts, petits déjeuners et dîners de direction",
-    ],
+  en: {
+    kicker: "Request a quote",
+    title: "Your event starts with a few good questions.",
+    lead: "Tell us the essentials. Your request is designed to be recorded, followed up and handled by the MBP team.",
   },
-  "a-propos": {
-    title: "MBP, My Best Partner autour de la table.",
-    lead: "Un partenaire fiable pour les entreprises et les moments qui se célèbrent.",
-    body: "Notre métier est de rendre l’organisation plus simple et le repas plus mémorable, avec une attention particulière portée aux produits, aux détails et à vos invités.",
-    points: [
-      "Basé à Bruxelles",
-      "Catering B2B & privé",
-      "Formules généreuses",
-      "Accompagnement personnalisé",
+} as const;
+
+const catalogueCopy = {
+  fr: {
+    formKicker: "Recevoir le catalogue",
+    formTitle: "Vos coordonnées",
+    kicker: "Catalogue 2026-2027",
+    lead: "Indiquez vos coordonnées pour recevoir notre catalogue complet et imaginer la formule adaptée à votre événement.",
+    list: [
+      "Formules B2B et événements privés",
+      "Suggestions pour chaque moment de la journée",
+      "Accompagnement sur mesure par l’équipe MBP",
     ],
+    title: "Découvrez l’univers MBP Catering.",
   },
-  galerie: {
-    title: "Des tables faites pour se retrouver.",
-    lead: "Un aperçu de l’esprit MBP : généreux, coloré, vivant.",
-    body: "Les visuels de réalisations seront enrichis avec les photos de MBP. Cette première version donne la structure d’une galerie légère et inspirante.",
-    points: [
-      "Lunchs d’entreprise",
-      "Buffets",
-      "Réceptions privées",
-      "Détails de table",
+  nl: {
+    formKicker: "Catalogus ontvangen",
+    formTitle: "Uw gegevens",
+    kicker: "Catalogus 2026-2027",
+    lead: "Laat uw gegevens achter om onze volledige catalogus te ontvangen en de formule voor uw evenement te ontdekken.",
+    list: [
+      "B2B- en privéformules",
+      "Suggesties voor elk moment van de dag",
+      "Begeleiding op maat door het MBP-team",
     ],
+    title: "Ontdek de wereld van MBP Catering.",
   },
-  faq: {
-    title: "Les réponses aux questions essentielles.",
-    lead: "Les règles les plus utiles avant de nous transmettre votre demande.",
-    body: "Votre demande reste unique : ces repères nous permettent de répondre rapidement et d’organiser l’événement dans de bonnes conditions.",
-    points: [
-      "Minimum de 10 personnes",
-      "48 h minimum pour le B2B",
-      "5 jours minimum pour les événements privés",
-      "Livraison autour de Bruxelles, jusqu’à ± 40 km",
+  en: {
+    formKicker: "Receive the catalogue",
+    formTitle: "Your details",
+    kicker: "Catalogue 2026-2027",
+    lead: "Leave your details to receive our complete catalogue and imagine the formula that suits your event.",
+    list: [
+      "Business and private-event formulas",
+      "Suggestions for every moment of the day",
+      "Tailored guidance from the MBP team",
     ],
+    title: "Discover the world of MBP Catering.",
   },
-  contact: {
-    title: "Parlons de ce que vous préparez.",
-    lead: "Une question avant de demander un devis ? Notre équipe est à votre écoute.",
-    body: "Pour une demande complète, le formulaire de devis est le meilleur point de départ. Pour le reste, contactez MBP directement.",
-    points: [
-      "info@mbpcatering.be",
-      "Réponse personnalisée",
-      "Bruxelles et environs",
-      "Livraison offerte dès 250 €",
-    ],
-  },
-  confidentialite: {
-    title: "Votre confidentialité compte.",
-    lead: "MBP Catering utilise vos informations uniquement pour répondre à votre demande et assurer le suivi de nos échanges.",
-    body: "Vos coordonnées peuvent être collectées lorsque vous demandez un devis ou le catalogue. Elles ne sont pas vendues à des tiers et sont conservées seulement pendant la durée nécessaire au suivi commercial ou légal.",
-    points: [
-      "Droit d’accès et de rectification",
-      "Droit à l’effacement",
-      "Retrait du consentement",
-      "Contact : info@mbpcatering.be",
-    ],
-  },
-};
+} as const;
 
 export function generateStaticParams() {
   return locales.flatMap((locale) => routes.map((slug) => ({ locale, slug })));
@@ -110,61 +81,59 @@ export default async function DetailPage({
   params: Promise<{ locale: Locale; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  if (
-    !locales.includes(locale) ||
-    !routes.includes(slug as (typeof routes)[number])
-  )
+  if (!locales.includes(locale) || !routes.includes(slug as RouteSlug))
     notFound();
-  if (slug === "devis")
+
+  if (slug === "devis") {
+    const content = quoteCopy[locale];
     return (
       <>
         <SiteHeader locale={locale} />
         <main className="quote-page">
           <div className="shell page-heading">
-            <p className="kicker">Demande de devis</p>
-            <h1>Votre événement commence par quelques bonnes questions.</h1>
-            <p>
-              Donnez-nous l’essentiel. Votre demande est conçue pour être
-              ensuite enregistrée, suivie et traitée par l’équipe MBP.
-            </p>
+            <p className="kicker">{content.kicker}</p>
+            <h1>{content.title}</h1>
+            <p>{content.lead}</p>
           </div>
           <div className="shell">
-            <QuoteForm />
+            <QuoteForm locale={locale} />
           </div>
         </main>
         <SiteFooter locale={locale} />
       </>
     );
-  if (slug === "catalogue")
+  }
+
+  if (slug === "catalogue") {
+    const content = catalogueCopy[locale];
     return (
       <>
         <SiteHeader locale={locale} />
         <main className="catalogue-page">
           <section className="shell catalogue-gate">
             <div className="catalogue-gate-copy">
-              <p className="kicker">Catalogue 2026-2027</p>
-              <h1>Découvrez l’univers MBP Catering.</h1>
-              <p>
-                Indiquez vos coordonnées pour recevoir notre catalogue complet
-                et imaginer la formule adaptée à votre événement.
-              </p>
+              <p className="kicker">{content.kicker}</p>
+              <h1>{content.title}</h1>
+              <p>{content.lead}</p>
               <ul>
-                <li>Formules B2B et événements privés</li>
-                <li>Suggestions pour chaque moment de la journée</li>
-                <li>Accompagnement sur mesure par l’équipe MBP</li>
+                {content.list.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
               </ul>
             </div>
             <div className="catalogue-gate-form">
-              <p className="kicker">Recevoir le catalogue</p>
-              <h2>Vos coordonnées</h2>
-              <CatalogueDownloadForm />
+              <p className="kicker">{content.formKicker}</p>
+              <h2>{content.formTitle}</h2>
+              <CatalogueDownloadForm locale={locale} />
             </div>
           </section>
         </main>
         <SiteFooter locale={locale} />
       </>
     );
-  const page = pages[slug];
+  }
+
+  const page = detailPages[locale][slug as Exclude<RouteSlug, "devis">];
   return (
     <>
       <SiteHeader locale={locale} />
@@ -178,7 +147,7 @@ export default async function DetailPage({
           <div>
             <p>{page.body}</p>
             <Link className="button" href={`/${locale}/devis`}>
-              Demander un devis
+              {copy[locale].quote}
             </Link>
           </div>
           <div className="detail-points">
@@ -189,28 +158,12 @@ export default async function DetailPage({
         </section>
         {slug === "faq" && (
           <section className="shell faq-list">
-            <details open>
-              <summary>Quel est le nombre minimum de personnes ?</summary>
-              <p>
-                Nos formules sont prévues à partir de 10 personnes. Certaines
-                catégories peuvent avoir leur propre minimum, par exemple les
-                zakouskis.
-              </p>
-            </details>
-            <details>
-              <summary>Quel délai faut-il prévoir ?</summary>
-              <p>
-                Au minimum 48 heures pour le B2B et 5 jours pour un événement
-                privé.
-              </p>
-            </details>
-            <details>
-              <summary>Où livrez-vous ?</summary>
-              <p>
-                À Bruxelles et dans les environs, dans un rayon d’environ 40 km.
-                La livraison est offerte à partir de 250 €.
-              </p>
-            </details>
+            {faqCopy[locale].map(([question, answer], index) => (
+              <details key={question} open={index === 0}>
+                <summary>{question}</summary>
+                <p>{answer}</p>
+              </details>
+            ))}
           </section>
         )}
       </main>

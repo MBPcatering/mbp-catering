@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { evaluateQuoteRequest, RequestType } from "@/lib/quote-rules";
+import { quoteFormCopy } from "@/lib/form-copy";
+import { Locale } from "@/lib/site-content";
 
 type FormState = {
   requestType: RequestType;
@@ -9,7 +11,8 @@ type FormState = {
   guestCount: number;
 };
 
-export function QuoteForm() {
+export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
+  const text = quoteFormCopy[locale];
   const [state, setState] = useState<FormState>({
     requestType: "b2b",
     eventDate: "",
@@ -31,13 +34,13 @@ export function QuoteForm() {
       <div className="form-step">
         <span>01</span>
         <div>
-          <h2>Votre événement</h2>
-          <p>Quelques détails pour orienter notre proposition.</p>
+          <h2>{text.event}</h2>
+          <p>{text.eventHelp}</p>
         </div>
       </div>
       <div className="form-grid">
         <label>
-          <span className="field-label">Type de demande</span>
+          <span className="field-label">{text.requestType}</span>
           <select
             value={state.requestType}
             onChange={(event) =>
@@ -50,7 +53,7 @@ export function QuoteForm() {
           </select>
         </label>
         <label>
-          <span className="field-label">Date de l’événement</span>
+          <span className="field-label">{text.eventDate}</span>
           <input
             required
             type="date"
@@ -59,18 +62,18 @@ export function QuoteForm() {
           />
         </label>
         <label>
-          <span className="field-label">Moment souhaité</span>
+          <span className="field-label">{text.eventTime}</span>
           <select defaultValue="">
             <option value="" disabled>
-              Choisissez un moment
+              {text.chooseTime}
             </option>
-            <option>Petit-déjeuner</option>
-            <option>Lunch</option>
-            <option>Dîner</option>
+            <option>{text.breakfast}</option>
+            <option>{text.lunch}</option>
+            <option>{text.dinner}</option>
           </select>
         </label>
         <label>
-          <span className="field-label">Nombre de personnes</span>
+          <span className="field-label">{text.guests}</span>
           <input
             required
             min="10"
@@ -82,8 +85,8 @@ export function QuoteForm() {
           />
         </label>
         <label className="span-two">
-          <span className="field-label">Lieu / adresse de l’événement</span>
-          <input required placeholder="Rue, code postal, ville" />
+          <span className="field-label">{text.address}</span>
+          <input required placeholder={text.placeholder} />
         </label>
       </div>
       {eligibility && !eligibility.eligible && (
@@ -96,14 +99,14 @@ export function QuoteForm() {
       <div className="form-step">
         <span>02</span>
         <div>
-          <h2>Votre envie</h2>
-          <p>Nous affinons ensuite ensemble.</p>
+          <h2>{text.wishes}</h2>
+          <p>{text.wishesHelp}</p>
         </div>
       </div>
       <div className="form-grid">
         <fieldset className="offer-choices span-two">
           <legend>
-            Offres souhaitées <em>(plusieurs choix possibles)</em>
+            {text.offers} <em>{text.multiple}</em>
           </legend>
           <label>
             <input type="checkbox" name="services" value="Pains garnis" /> Pains
@@ -138,64 +141,55 @@ export function QuoteForm() {
           </label>
         </fieldset>
         <div className="delivery-note span-two">
-          <strong>Livraison</strong>
-          <span>Votre commande est livrée à l’adresse indiquée.</span>
+          <strong>{text.delivery}</strong>
+          <span>{text.deliveryText}</span>
         </div>
         <label className="span-two form-textarea">
-          <span className="field-label">Vos précisions</span>
-          <textarea
-            rows={4}
-            placeholder="Allergies, service, budget, ambiance ou toute autre information utile…"
-          />
+          <span className="field-label">{text.notes}</span>
+          <textarea rows={4} placeholder={text.notesPlaceholder} />
         </label>
       </div>
       <div className="form-step">
         <span>03</span>
         <div>
-          <h2>Vos coordonnées</h2>
-          <p>Nous vous répondons avec une proposition personnalisée.</p>
+          <h2>{text.contacts}</h2>
+          <p>{text.contactsHelp}</p>
         </div>
       </div>
       <div className="form-grid">
         <label>
-          <span className="field-label">Prénom</span>
+          <span className="field-label">{text.firstName}</span>
           <input required autoComplete="given-name" />
         </label>
         <label>
-          <span className="field-label">Nom</span>
+          <span className="field-label">{text.lastName}</span>
           <input required autoComplete="family-name" />
         </label>
         <label>
           <span className="field-label">
-            Entreprise <em>(facultatif)</em>
+            {text.company} <em>{text.optional}</em>
           </span>
           <input />
         </label>
         <label>
-          <span className="field-label">Téléphone</span>
+          <span className="field-label">{text.phone}</span>
           <input required type="tel" autoComplete="tel" />
         </label>
         <label className="span-two">
-          <span className="field-label">E-mail</span>
+          <span className="field-label">{text.email}</span>
           <input required type="email" autoComplete="email" />
         </label>
       </div>
       <label className="consent">
-        <input required type="checkbox" /> J’accepte que MBP Catering utilise
-        mes coordonnées pour traiter cette demande.
+        <input required type="checkbox" /> {text.consent}
       </label>
       <button
         className="button"
         disabled={Boolean(eligibility && !eligibility.eligible)}
       >
-        {submitted ? "Demande prête à être envoyée" : "Envoyer ma demande"}
+        {submitted ? text.submitted : text.submit}
       </button>
-      {submitted && (
-        <p className="success-message">
-          Merci. Votre demande est structurée pour notre équipe et pourra
-          bientôt être transmise à notre système de suivi.
-        </p>
-      )}
+      {submitted && <p className="success-message">{text.success}</p>}
       <p className="form-note">
         Minimum 10 personnes · B2B : 48 h minimum · Événement privé : 5 jours
         minimum · Livraison gratuite dès 250 €

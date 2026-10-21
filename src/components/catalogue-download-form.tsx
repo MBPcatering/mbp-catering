@@ -1,10 +1,13 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { catalogueFormCopy } from "@/lib/form-copy";
+import { Locale } from "@/lib/site-content";
 
 type DownloadState = "idle" | "loading" | "success" | "error";
 
-export function CatalogueDownloadForm() {
+export function CatalogueDownloadForm({ locale = "fr" }: { locale?: Locale }) {
+  const text = catalogueFormCopy[locale];
   const [state, setState] = useState<DownloadState>("idle");
   const [downloadUrl, setDownloadUrl] = useState("");
 
@@ -38,14 +41,11 @@ export function CatalogueDownloadForm() {
   if (state === "success")
     return (
       <div className="catalogue-success" role="status">
-        <p className="kicker">Merci</p>
-        <h2>Votre catalogue est prêt.</h2>
-        <p>
-          Merci pour votre intérêt. Utilisez le bouton ci-dessous pour
-          télécharger le catalogue MBP Catering 2026-2027.
-        </p>
+        <p className="kicker">{text.thanks}</p>
+        <h2>{text.ready}</h2>
+        <p>{text.success}</p>
         <a className="button" href={downloadUrl} download>
-          Télécharger le catalogue
+          {text.download}
         </a>
       </div>
     );
@@ -54,42 +54,35 @@ export function CatalogueDownloadForm() {
     <form className="catalogue-form" onSubmit={submit}>
       <div className="form-grid">
         <label>
-          <span className="field-label">Prénom</span>
+          <span className="field-label">{text.firstName}</span>
           <input name="firstName" required autoComplete="given-name" />
         </label>
         <label>
-          <span className="field-label">Nom</span>
+          <span className="field-label">{text.lastName}</span>
           <input name="lastName" required autoComplete="family-name" />
         </label>
         <label>
           <span className="field-label">
-            Entreprise <em>(facultatif)</em>
+            {text.company} <em>{text.optional}</em>
           </span>
           <input name="company" autoComplete="organization" />
         </label>
         <label>
-          <span className="field-label">Téléphone</span>
+          <span className="field-label">{text.phone}</span>
           <input name="phone" required type="tel" autoComplete="tel" />
         </label>
         <label className="span-two">
-          <span className="field-label">E-mail professionnel</span>
+          <span className="field-label">{text.email}</span>
           <input name="email" required type="email" autoComplete="email" />
         </label>
       </div>
       <label className="consent">
-        <input name="consent" required type="checkbox" /> J’accepte que MBP
-        Catering utilise mes coordonnées pour me transmettre le catalogue et me
-        recontacter à son sujet.
+        <input name="consent" required type="checkbox" /> {text.consent}
       </label>
       <button className="button" disabled={state === "loading"}>
-        {state === "loading" ? "Préparation…" : "Recevoir le catalogue"}
+        {state === "loading" ? text.loading : text.submit}
       </button>
-      {state === "error" && (
-        <p className="form-alert">
-          Nous n’avons pas pu préparer le catalogue. Vérifiez vos coordonnées et
-          réessayez.
-        </p>
-      )}
+      {state === "error" && <p className="form-alert">{text.error}</p>}
     </form>
   );
 }
