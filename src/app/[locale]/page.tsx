@@ -2,13 +2,30 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getHeroVideoSource, heroVideo } from "@/lib/hero-video";
 import { homeCopy, Locale, copy, locales } from "@/lib/site-content";
+import { createPageMetadata } from "@/lib/seo";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!locales.includes(locale)) notFound();
+
+  return createPageMetadata({
+    locale,
+    title: copy[locale].hero,
+    description: copy[locale].intro,
+  });
 }
 
 export default async function HomePage({

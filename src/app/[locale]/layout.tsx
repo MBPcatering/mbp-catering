@@ -1,23 +1,40 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { StructuredData } from "@/components/structured-data";
 import { copy, Locale, locales } from "@/lib/site-content";
+import { createPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
-  const { locale } = await params;
-  if (!locales.includes(locale)) notFound();
+  const { locale: localeParam } = await params;
+  if (!locales.includes(localeParam as Locale)) notFound();
+  const locale = localeParam as Locale;
 
-  return {
-    title: `MBP Catering | ${copy[locale].hero}`,
+  return createPageMetadata({
+    locale,
+    title: copy[locale].hero,
     description: copy[locale].intro,
-  };
+  });
 }
 
-export default function LocaleLayout({
+export default async function LocaleLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
-  return children;
+  params,
+}: Readonly<{
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}>) {
+  const { locale: localeParam } = await params;
+  if (!locales.includes(localeParam as Locale)) notFound();
+  const locale = localeParam as Locale;
+
+  return (
+    <>
+      <StructuredData locale={locale} />
+      {children}
+    </>
+  );
 }

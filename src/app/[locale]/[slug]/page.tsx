@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CatalogueDownloadForm } from "@/components/catalogue-download-form";
 import { QuoteForm } from "@/components/quote-form";
@@ -13,6 +14,7 @@ import {
   RouteSlug,
   routes,
 } from "@/lib/site-content";
+import { createPageMetadata } from "@/lib/seo";
 
 const quoteCopy = {
   fr: {
@@ -73,6 +75,45 @@ const catalogueCopy = {
 
 export function generateStaticParams() {
   return locales.flatMap((locale) => routes.map((slug) => ({ locale, slug })));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  if (!locales.includes(locale) || !routes.includes(slug as RouteSlug)) {
+    notFound();
+  }
+
+  if (slug === "devis") {
+    const content = quoteCopy[locale];
+    return createPageMetadata({
+      locale,
+      path: "/devis",
+      title: content.title,
+      description: content.lead,
+    });
+  }
+
+  if (slug === "catalogue") {
+    const content = catalogueCopy[locale];
+    return createPageMetadata({
+      locale,
+      path: "/catalogue",
+      title: content.title,
+      description: content.lead,
+    });
+  }
+
+  const page = detailPages[locale][slug as Exclude<RouteSlug, "devis">];
+  return createPageMetadata({
+    locale,
+    path: `/${slug}`,
+    title: page.title,
+    description: page.lead,
+  });
 }
 
 export default async function DetailPage({
