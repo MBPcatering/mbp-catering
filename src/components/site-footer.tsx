@@ -24,7 +24,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
             <small>{content.tagline}</small>
           </div>
         </div>
-        <nav className="footer-links" aria-label="Découvrir MBP Catering">
+        <nav className="footer-links" aria-label={footer.exploreAria}>
           {footer.explore.map((label, index) => (
             <Link
               key={explorePaths[index]}
@@ -34,7 +34,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
             </Link>
           ))}
         </nav>
-        <nav className="footer-links" aria-label="Nos informations">
+        <nav className="footer-links" aria-label={footer.discoverAria}>
           {footer.discover.map((label, index) => (
             <Link
               key={discoverPaths[index]}
@@ -58,7 +58,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
               href="https://www.instagram.com/catering.mbp/"
               target="_blank"
               rel="noreferrer"
-              aria-label="Suivre MBP Catering sur Instagram"
+              aria-label={footer.instagramAria}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -77,8 +77,8 @@ export function SiteFooter({ locale }: { locale: Locale }) {
       </div>
       <div className="shell footer-bottom">
         <span>© {new Date().getFullYear()} MBP Catering</span>
-        <span>Bruxelles & environs</span>
-        <span>Conçu avec passion par KENOMI</span>
+        <span>{footer.city}</span>
+        <span>{footer.credit}</span>
       </div>
     </footer>
   );

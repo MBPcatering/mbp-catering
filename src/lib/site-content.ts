@@ -78,6 +78,132 @@ export const copy = {
   },
 } as const;
 
+export const homeCopy = {
+  fr: {
+    heroKicker: "Bruxelles · Catering & événements",
+    follow: "Suivez-nous",
+    introductionKicker: "Une table à votre image",
+    introductionTitle:
+      "Du premier café au dernier toast, MBP accompagne vos moments importants.",
+    introductionBody:
+      "Une cuisine de saison, des formules généreuses et une équipe attentive : la base d’un événement simple à organiser et agréable à vivre.",
+    businessEyebrow: "Pour les équipes",
+    discover: "Découvrir",
+    privateEyebrow: "Pour les hôtes",
+    imagine: "Imaginer mon événement",
+    catalogueKicker: "Catalogue 2026–2027",
+    receiveCatalogue: "Recevoir le catalogue",
+    cataloguePoints: [
+      "Un guide complet pour vos événements",
+      "Des formules pour les entreprises",
+      "Des propositions pour les moments privés",
+      "Une équipe à votre écoute",
+    ],
+    trustKicker: "L’essentiel, clairement",
+    trustTitle: "Votre événement mérite une organisation fluide.",
+    guestsLabel: "personnes",
+    daysLabel: "jours",
+    trustMinimum: "minimum pour nos formules",
+    trustDeadline: "selon votre type d’événement",
+    trustArea: "autour de Bruxelles",
+    trustDelivery: "de commande, livraison offerte",
+    finalKicker: "Votre projet commence ici",
+    finalTitle: "Parlons de votre prochaine table.",
+    finalBody:
+      "Indiquez les grandes lignes. MBP vous répond avec une proposition vraiment adaptée.",
+  },
+  nl: {
+    heroKicker: "Brussel · Catering & evenementen",
+    follow: "Volg ons",
+    introductionKicker: "Een tafel op uw maat",
+    introductionTitle:
+      "Van de eerste koffie tot de laatste toast: MBP begeleidt uw belangrijke momenten.",
+    introductionBody:
+      "Seizoenskeuken, royale formules en een aandachtig team: de basis voor een eenvoudig te organiseren en aangenaam evenement.",
+    businessEyebrow: "Voor teams",
+    discover: "Ontdek",
+    privateEyebrow: "Voor gastheren en -vrouwen",
+    imagine: "Mijn evenement samenstellen",
+    catalogueKicker: "Catalogus 2026–2027",
+    receiveCatalogue: "Catalogus ontvangen",
+    cataloguePoints: [
+      "Een complete gids voor uw evenementen",
+      "Formules voor bedrijven",
+      "Voorstellen voor privémomenten",
+      "Een team dat naar u luistert",
+    ],
+    trustKicker: "Het belangrijkste, helder",
+    trustTitle: "Uw evenement verdient een vlotte organisatie.",
+    guestsLabel: "personen",
+    daysLabel: "dagen",
+    trustMinimum: "minimum voor onze formules",
+    trustDeadline: "afhankelijk van uw type evenement",
+    trustArea: "rond Brussel",
+    trustDelivery: "bestelling, gratis levering",
+    finalKicker: "Uw project begint hier",
+    finalTitle: "Laten we het over uw volgende tafel hebben.",
+    finalBody:
+      "Vertel ons de grote lijnen. MBP antwoordt met een voorstel dat echt bij u past.",
+  },
+  en: {
+    heroKicker: "Brussels · Catering & events",
+    follow: "Follow us",
+    introductionKicker: "A table made for you",
+    introductionTitle:
+      "From the first coffee to the final toast, MBP supports your important moments.",
+    introductionBody:
+      "Seasonal cooking, generous formulas and an attentive team: the foundations of an event that is easy to organise and a pleasure to enjoy.",
+    businessEyebrow: "For teams",
+    discover: "Discover",
+    privateEyebrow: "For hosts",
+    imagine: "Plan my event",
+    catalogueKicker: "Catalogue 2026–2027",
+    receiveCatalogue: "Receive the catalogue",
+    cataloguePoints: [
+      "A complete guide for your events",
+      "Formulas for businesses",
+      "Options for private moments",
+      "A team that listens to you",
+    ],
+    trustKicker: "The essentials, clearly",
+    trustTitle: "Your event deserves seamless organisation.",
+    guestsLabel: "guests",
+    daysLabel: "days",
+    trustMinimum: "minimum for our formulas",
+    trustDeadline: "depending on your event type",
+    trustArea: "around Brussels",
+    trustDelivery: "order, free delivery",
+    finalKicker: "Your project starts here",
+    finalTitle: "Let's talk about your next table.",
+    finalBody:
+      "Share the essentials. MBP will respond with a proposal that genuinely fits your needs.",
+  },
+} as const;
+
+export const headerCopy = {
+  fr: {
+    brandAria: "MBP Catering",
+    primaryNavigation: "Navigation principale",
+    mobileNavigation: "Navigation mobile",
+    openMenu: "Ouvrir le menu",
+    closeMenu: "Fermer le menu",
+  },
+  nl: {
+    brandAria: "MBP Catering",
+    primaryNavigation: "Hoofdnavigatie",
+    mobileNavigation: "Mobiele navigatie",
+    openMenu: "Menu openen",
+    closeMenu: "Menu sluiten",
+  },
+  en: {
+    brandAria: "MBP Catering",
+    primaryNavigation: "Primary navigation",
+    mobileNavigation: "Mobile navigation",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
+  },
+} as const;
+
 export const routes = [
   "b2b",
   "evenements-prives",
@@ -387,6 +513,11 @@ export const footerCopy = {
     ],
     privacy: "RGPD & confidentialité",
     social: "Suivez MBP",
+    exploreAria: "Découvrir MBP Catering",
+    discoverAria: "Nos informations",
+    instagramAria: "Suivre MBP Catering sur Instagram",
+    city: "Bruxelles & environs",
+    credit: "Conçu avec passion par KENOMI",
   },
   nl: {
     heading: ["Tafels die", "bijblijven."],
@@ -399,6 +530,11 @@ export const footerCopy = {
     ],
     privacy: "Privacy & AVG",
     social: "Volg MBP",
+    exploreAria: "Ontdek MBP Catering",
+    discoverAria: "Onze informatie",
+    instagramAria: "Volg MBP Catering op Instagram",
+    city: "Brussel & omgeving",
+    credit: "Met passie gemaakt door KENOMI",
   },
   en: {
     heading: ["Tables that", "stay with you."],
@@ -411,6 +547,11 @@ export const footerCopy = {
     ],
     privacy: "Privacy & GDPR",
     social: "Follow MBP",
+    exploreAria: "Discover MBP Catering",
+    discoverAria: "Our information",
+    instagramAria: "Follow MBP Catering on Instagram",
+    city: "Brussels & surroundings",
+    credit: "Made with passion by KENOMI",
   },
 } as const;
 

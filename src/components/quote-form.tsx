@@ -11,6 +11,12 @@ type FormState = {
   guestCount: number;
 };
 
+function todayForDateInput() {
+  const today = new Date();
+  const offset = today.getTimezoneOffset() * 60_000;
+  return new Date(today.getTime() - offset).toISOString().slice(0, 10);
+}
+
 export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
   const text = quoteFormCopy[locale];
   const [state, setState] = useState<FormState>({
@@ -20,6 +26,7 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
   });
   const [submitted, setSubmitted] = useState(false);
   const eligibility = state.eventDate ? evaluateQuoteRequest(state) : null;
+  const minimumEventDate = todayForDateInput();
   const update = (field: keyof FormState, value: string | number) =>
     setState((current) => ({ ...current, [field]: value }));
 
@@ -47,15 +54,16 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
               update("requestType", event.target.value as RequestType)
             }
           >
-            <option value="b2b">Catering B2B</option>
-            <option value="private">Événement privé</option>
-            <option value="other">Autre demande</option>
+            <option value="b2b">{text.requestB2b}</option>
+            <option value="private">{text.requestPrivate}</option>
+            <option value="other">{text.requestOther}</option>
           </select>
         </label>
         <label>
           <span className="field-label">{text.eventDate}</span>
           <input
             required
+            min={minimumEventDate}
             type="date"
             value={state.eventDate}
             onChange={(event) => update("eventDate", event.target.value)}
@@ -92,8 +100,10 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
       {eligibility && !eligibility.eligible && (
         <p className="form-alert">
           {eligibility.reason === "minimum-guests"
-            ? "Nos formules démarrent à 10 personnes. Pour une demande spéciale, contactez-nous."
-            : "Ce délai est trop court pour une confirmation en ligne. Contactez-nous : nous vérifierons ce qui reste possible."}
+            ? text.alertMinimum
+            : eligibility.reason === "past-date"
+              ? text.alertPastDate
+              : text.alertDeadline}
         </p>
       )}
       <div className="form-step">
@@ -109,35 +119,28 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
             {text.offers} <em>{text.multiple}</em>
           </legend>
           <label>
-            <input type="checkbox" name="services" value="Pains garnis" /> Pains
-            garnis
+            <input type="checkbox" name="services" value="sandwiches" />{" "}
+            {text.serviceSandwiches}
           </label>
           <label>
-            <input type="checkbox" name="services" value="Poké bowls" /> Poké
-            bowls
+            <input type="checkbox" name="services" value="poke-bowls" />{" "}
+            {text.servicePoke}
           </label>
           <label>
-            <input type="checkbox" name="services" value="Buffet" /> Buffet
+            <input type="checkbox" name="services" value="buffet" />{" "}
+            {text.serviceBuffet}
           </label>
           <label>
-            <input
-              type="checkbox"
-              name="services"
-              value="Walking dinner / zakouskis"
-            />{" "}
-            Walking dinner / zakouskis
+            <input type="checkbox" name="services" value="walking-dinner" />{" "}
+            {text.serviceWalkingDinner}
           </label>
           <label>
-            <input type="checkbox" name="services" value="Petit déjeuner" />{" "}
-            Petit-déjeuner
+            <input type="checkbox" name="services" value="breakfast" />{" "}
+            {text.serviceBreakfast}
           </label>
           <label>
-            <input
-              type="checkbox"
-              name="services"
-              value="À discuter avec MBP"
-            />{" "}
-            À discuter avec MBP
+            <input type="checkbox" name="services" value="discuss-with-mbp" />{" "}
+            {text.serviceDiscuss}
           </label>
         </fieldset>
         <div className="delivery-note span-two">
@@ -190,10 +193,7 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
         {submitted ? text.submitted : text.submit}
       </button>
       {submitted && <p className="success-message">{text.success}</p>}
-      <p className="form-note">
-        Minimum 10 personnes · B2B : 48 h minimum · Événement privé : 5 jours
-        minimum · Livraison gratuite dès 250 €
-      </p>
+      <p className="form-note">{text.rules}</p>
     </form>
   );
 }

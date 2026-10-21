@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getMobileMenuClassName, getMobileMenuLabel } from "@/lib/mobile-menu";
 import { hasScrolledPastHeader } from "@/lib/header-scroll";
-import { Locale, copy } from "@/lib/site-content";
+import { headerCopy, Locale, copy } from "@/lib/site-content";
 
 const destinations = [
   "/",
@@ -23,6 +23,7 @@ export function SiteHeader({
   overlay?: boolean;
 }) {
   const content = copy[locale];
+  const header = headerCopy[locale];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -41,16 +42,24 @@ export function SiteHeader({
     return () => document.body.classList.remove("menu-open");
   }, [isMobileMenuOpen]);
 
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   return (
     <header
       className={`site-header${overlay ? " site-header-overlay" : ""}${isScrolled ? " is-scrolled" : ""}${isMobileMenuOpen ? " is-menu-open" : ""}`}
     >
       <div className="shell nav-wrap">
-        <Link href={`/${locale}`} className="brand" aria-label="MBP Catering">
+        <Link
+          href={`/${locale}`}
+          className="brand"
+          aria-label={header.brandAria}
+        >
           MBP <span>Catering</span>
           <small>{content.tagline}</small>
         </Link>
-        <nav className="desktop-nav" aria-label="Navigation principale">
+        <nav className="desktop-nav" aria-label={header.primaryNavigation}>
           {content.nav.map((item, index) => (
             <Link key={item} href={`/${locale}${destinations[index]}`}>
               {item}
@@ -67,7 +76,10 @@ export function SiteHeader({
           type="button"
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-menu"
-          aria-label={getMobileMenuLabel(isMobileMenuOpen)}
+          aria-label={getMobileMenuLabel(isMobileMenuOpen, {
+            close: header.closeMenu,
+            open: header.openMenu,
+          })}
           onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
         >
           <span />
@@ -78,7 +90,7 @@ export function SiteHeader({
       <nav
         id="mobile-menu"
         className={getMobileMenuClassName(isMobileMenuOpen)}
-        aria-label="Navigation mobile"
+        aria-label={header.mobileNavigation}
       >
         <div className="mobile-menu-visual" aria-hidden="true">
           <div className="mobile-menu-glow" />

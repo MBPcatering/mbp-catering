@@ -5,6 +5,9 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     event: "Votre événement",
     eventHelp: "Quelques détails pour orienter notre proposition.",
     requestType: "Type de demande",
+    requestB2b: "Catering B2B",
+    requestPrivate: "Événement privé",
+    requestOther: "Autre demande",
     eventDate: "Date de l’événement",
     eventTime: "Moment souhaité",
     guests: "Nombre de personnes",
@@ -37,11 +40,27 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     breakfast: "Petit-déjeuner",
     lunch: "Lunch",
     dinner: "Dîner",
+    alertMinimum:
+      "Nos formules démarrent à 10 personnes. Pour une demande spéciale, contactez-nous.",
+    alertPastDate: "La date de l’événement ne peut pas être dans le passé.",
+    alertDeadline:
+      "Ce délai est trop court pour une confirmation en ligne. Contactez-nous : nous vérifierons ce qui reste possible.",
+    serviceSandwiches: "Pains garnis",
+    servicePoke: "Poké bowls",
+    serviceBuffet: "Buffet",
+    serviceWalkingDinner: "Walking dinner / zakouskis",
+    serviceBreakfast: "Petit-déjeuner",
+    serviceDiscuss: "À discuter avec MBP",
+    rules:
+      "Minimum 10 personnes · B2B : 48 h minimum · Événement privé : 5 jours minimum · Livraison gratuite dès 250 €",
   },
   nl: {
     event: "Uw evenement",
     eventHelp: "Enkele details om ons voorstel te richten.",
     requestType: "Type aanvraag",
+    requestB2b: "B2B-catering",
+    requestPrivate: "Privé-evenement",
+    requestOther: "Andere aanvraag",
     eventDate: "Datum van het evenement",
     eventTime: "Gewenst moment",
     guests: "Aantal personen",
@@ -74,11 +93,28 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     breakfast: "Ontbijt",
     lunch: "Lunch",
     dinner: "Diner",
+    alertMinimum:
+      "Onze formules starten vanaf 10 personen. Neem voor een speciale aanvraag contact met ons op.",
+    alertPastDate:
+      "De datum van het evenement kan niet in het verleden liggen.",
+    alertDeadline:
+      "Deze termijn is te kort voor een onlinebevestiging. Neem contact met ons op: we bekijken wat nog mogelijk is.",
+    serviceSandwiches: "Belegde broodjes",
+    servicePoke: "Poké bowls",
+    serviceBuffet: "Buffet",
+    serviceWalkingDinner: "Walking dinner / hapjes",
+    serviceBreakfast: "Ontbijt",
+    serviceDiscuss: "Te bespreken met MBP",
+    rules:
+      "Minimum 10 personen · B2B: minimum 48 uur · Privé-evenement: minimum 5 dagen · Gratis levering vanaf €250",
   },
   en: {
     event: "Your event",
     eventHelp: "A few details to guide our proposal.",
     requestType: "Request type",
+    requestB2b: "B2B catering",
+    requestPrivate: "Private event",
+    requestOther: "Other request",
     eventDate: "Event date",
     eventTime: "Preferred time",
     guests: "Number of guests",
@@ -111,6 +147,19 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     breakfast: "Breakfast",
     lunch: "Lunch",
     dinner: "Dinner",
+    alertMinimum:
+      "Our formulas start from 10 guests. For a special request, please contact us.",
+    alertPastDate: "The event date cannot be in the past.",
+    alertDeadline:
+      "This lead time is too short for an online confirmation. Contact us and we will check what remains possible.",
+    serviceSandwiches: "Filled sandwiches",
+    servicePoke: "Poké bowls",
+    serviceBuffet: "Buffet",
+    serviceWalkingDinner: "Walking dinner / canapés",
+    serviceBreakfast: "Breakfast",
+    serviceDiscuss: "To discuss with MBP",
+    rules:
+      "Minimum 10 guests · B2B: minimum 48 hours · Private event: minimum 5 days · Free delivery from €250",
   },
 };
 

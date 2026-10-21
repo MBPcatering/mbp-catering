@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { evaluateQuoteRequest } from "./quote-rules";
 
 describe("evaluateQuoteRequest", () => {
+  it("rejects an event date in the past", () => {
+    expect(
+      evaluateQuoteRequest(
+        { requestType: "b2b", guestCount: 10, eventDate: "2026-10-06" },
+        new Date("2026-10-07T10:00:00Z"),
+      ),
+    ).toMatchObject({ eligible: false, reason: "past-date" });
+  });
+
   it("rejects a request below the ten-person minimum", () => {
     expect(
       evaluateQuoteRequest({

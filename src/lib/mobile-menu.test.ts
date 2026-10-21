@@ -3,8 +3,10 @@ import { getMobileMenuClassName, getMobileMenuLabel } from "./mobile-menu";
 
 describe("getMobileMenuLabel", () => {
   it("describes the action that the burger button will perform", () => {
-    expect(getMobileMenuLabel(false)).toBe("Ouvrir le menu");
-    expect(getMobileMenuLabel(true)).toBe("Fermer le menu");
+    const labels = { close: "Fermer le menu", open: "Ouvrir le menu" };
+
+    expect(getMobileMenuLabel(false, labels)).toBe("Ouvrir le menu");
+    expect(getMobileMenuLabel(true, labels)).toBe("Fermer le menu");
   });
 
   it("adds the open state class only while the panel is open", () => {

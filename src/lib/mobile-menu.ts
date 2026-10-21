@@ -1,5 +1,8 @@
-export function getMobileMenuLabel(isOpen: boolean) {
-  return isOpen ? "Fermer le menu" : "Ouvrir le menu";
+export function getMobileMenuLabel(
+  isOpen: boolean,
+  labels: { close: string; open: string },
+) {
+  return isOpen ? labels.close : labels.open;
 }
 
 export function getMobileMenuClassName(isOpen: boolean) {
