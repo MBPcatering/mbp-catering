@@ -17,7 +17,10 @@ export function CatalogueDownloadForm({ locale = "fr" }: { locale?: Locale }) {
     const form = new FormData(event.currentTarget);
     const response = await fetch("/api/catalogue-downloads", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
       body: JSON.stringify({
         firstName: form.get("firstName"),
         lastName: form.get("lastName"),

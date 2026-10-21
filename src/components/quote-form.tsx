@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { evaluateQuoteRequest, RequestType } from "@/lib/quote-rules";
 import { quoteFormCopy } from "@/lib/form-copy";
 import { Locale } from "@/lib/site-content";
@@ -25,19 +25,63 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
     guestCount: 10,
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState(false);
+  const idempotencyKey = useRef<string | null>(null);
   const eligibility = state.eventDate ? evaluateQuoteRequest(state) : null;
   const minimumEventDate = todayForDateInput();
   const update = (field: keyof FormState, value: string | number) =>
     setState((current) => ({ ...current, [field]: value }));
 
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (eligibility && !eligibility.eligible) return;
+
+    setIsSubmitting(true);
+    setSubmissionError(false);
+    idempotencyKey.current ??= crypto.randomUUID();
+
+    try {
+      const form = new FormData(event.currentTarget);
+      const response = await fetch("/api/quote-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey.current,
+        },
+        body: JSON.stringify({
+          requestType: form.get("requestType"),
+          eventDate: form.get("eventDate"),
+          eventTime: form.get("eventTime"),
+          guestCount: Number(form.get("guestCount")),
+          address: form.get("address"),
+          services: form.getAll("services"),
+          delivery: form.get("delivery"),
+          notes: form.get("notes"),
+          firstName: form.get("firstName"),
+          lastName: form.get("lastName"),
+          company: form.get("company"),
+          phone: form.get("phone"),
+          email: form.get("email"),
+          consent: form.get("consent") === "on",
+        }),
+      });
+
+      if (!response.ok) {
+        setSubmissionError(true);
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setSubmissionError(true);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
-    <form
-      className="quote-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!eligibility || eligibility.eligible) setSubmitted(true);
-      }}
-    >
+    <form className="quote-form" onSubmit={submit}>
       <div className="form-step">
         <span>01</span>
         <div>
@@ -49,6 +93,7 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
         <label>
           <span className="field-label">{text.requestType}</span>
           <select
+            name="requestType"
             value={state.requestType}
             onChange={(event) =>
               update("requestType", event.target.value as RequestType)
@@ -64,6 +109,7 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
           <input
             required
             min={minimumEventDate}
+            name="eventDate"
             type="date"
             value={state.eventDate}
             onChange={(event) => update("eventDate", event.target.value)}
@@ -71,7 +117,7 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
         </label>
         <label>
           <span className="field-label">{text.eventTime}</span>
-          <select defaultValue="">
+          <select name="eventTime" defaultValue="">
             <option value="" disabled>
               {text.chooseTime}
             </option>
@@ -85,6 +131,7 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
           <input
             required
             min="10"
+            name="guestCount"
             type="number"
             value={state.guestCount}
             onChange={(event) =>
@@ -94,7 +141,7 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
         </label>
         <label className="span-two">
           <span className="field-label">{text.address}</span>
-          <input required placeholder={text.placeholder} />
+          <input name="address" required placeholder={text.placeholder} />
         </label>
       </div>
       {eligibility && !eligibility.eligible && (
@@ -146,10 +193,11 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
         <div className="delivery-note span-two">
           <strong>{text.delivery}</strong>
           <span>{text.deliveryText}</span>
+          <input name="delivery" type="hidden" value="delivery" />
         </div>
         <label className="span-two form-textarea">
           <span className="field-label">{text.notes}</span>
-          <textarea rows={4} placeholder={text.notesPlaceholder} />
+          <textarea name="notes" rows={4} placeholder={text.notesPlaceholder} />
         </label>
       </div>
       <div className="form-step">
@@ -162,37 +210,42 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
       <div className="form-grid">
         <label>
           <span className="field-label">{text.firstName}</span>
-          <input required autoComplete="given-name" />
+          <input name="firstName" required autoComplete="given-name" />
         </label>
         <label>
           <span className="field-label">{text.lastName}</span>
-          <input required autoComplete="family-name" />
+          <input name="lastName" required autoComplete="family-name" />
         </label>
         <label>
           <span className="field-label">
             {text.company} <em>{text.optional}</em>
           </span>
-          <input />
+          <input name="company" />
         </label>
         <label>
           <span className="field-label">{text.phone}</span>
-          <input required type="tel" autoComplete="tel" />
+          <input name="phone" required type="tel" autoComplete="tel" />
         </label>
         <label className="span-two">
           <span className="field-label">{text.email}</span>
-          <input required type="email" autoComplete="email" />
+          <input name="email" required type="email" autoComplete="email" />
         </label>
       </div>
       <label className="consent">
-        <input required type="checkbox" /> {text.consent}
+        <input name="consent" required type="checkbox" /> {text.consent}
       </label>
       <button
         className="button"
-        disabled={Boolean(eligibility && !eligibility.eligible)}
+        disabled={Boolean(eligibility && !eligibility.eligible) || isSubmitting}
       >
-        {submitted ? text.submitted : text.submit}
+        {submitted
+          ? text.submitted
+          : isSubmitting
+            ? text.submitting
+            : text.submit}
       </button>
       {submitted && <p className="success-message">{text.success}</p>}
+      {submissionError && <p className="form-alert">{text.submitError}</p>}
       <p className="form-note">{text.rules}</p>
     </form>
   );

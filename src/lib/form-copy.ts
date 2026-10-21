@@ -30,7 +30,10 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     consent:
       "J’accepte que MBP Catering utilise mes coordonnées pour traiter cette demande.",
     submit: "Envoyer ma demande",
+    submitting: "Envoi en cours…",
     submitted: "Demande prête à être envoyée",
+    submitError:
+      "Votre demande n’a pas pu être envoyée. Veuillez réessayer dans quelques instants.",
     success:
       "Merci. Votre demande est structurée pour notre équipe et pourra bientôt être transmise à notre système de suivi.",
     placeholder: "Rue, code postal, ville",
@@ -83,7 +86,10 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     consent:
       "Ik geef MBP Catering toestemming om mijn gegevens te gebruiken om deze aanvraag te behandelen.",
     submit: "Mijn aanvraag versturen",
+    submitting: "Aanvraag versturen…",
     submitted: "Aanvraag klaar om te versturen",
+    submitError:
+      "Uw aanvraag kon niet worden verstuurd. Probeer het binnen enkele ogenblikken opnieuw.",
     success:
       "Bedankt. Uw aanvraag is voor ons team gestructureerd en kan binnenkort naar ons opvolgsysteem worden doorgestuurd.",
     placeholder: "Straat, postcode, gemeente",
@@ -137,7 +143,10 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     consent:
       "I agree that MBP Catering may use my details to process this request.",
     submit: "Send my request",
+    submitting: "Sending request…",
     submitted: "Request ready to send",
+    submitError:
+      "Your request could not be sent. Please try again in a few moments.",
     success:
       "Thank you. Your request is structured for our team and can soon be sent to our follow-up system.",
     placeholder: "Street, postcode, city",

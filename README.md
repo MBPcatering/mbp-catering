@@ -11,7 +11,7 @@ Le MVP comprend :
 - design responsive mobile-first inspiré du catalogue MBP 2026-2027 ;
 - formulaire de devis structuré pour une future connexion à Supabase et n8n ;
 - validation des règles commerciales principales ;
-- endpoint `POST /api/quote-requests` prêt à recevoir les demandes qualifiées.
+- endpoints `POST /api/quote-requests` et `POST /api/catalogue-downloads` persistés dans Supabase local.
 
 ## Stack
 
@@ -20,6 +20,7 @@ Le MVP comprend :
 - Tailwind CSS
 - Zod
 - Vitest
+- Supabase CLI et PostgreSQL local via Docker
 
 ## Installation
 
@@ -36,6 +37,10 @@ Ouvrez ensuite [http://localhost:3000/fr](http://localhost:3000/fr).
 npm run dev
 npm test
 npm run build
+npm run supabase:start
+npm run supabase:status
+npm run supabase:reset
+npm run supabase:stop
 ```
 
 ## Règles commerciales
@@ -55,13 +60,17 @@ Certaines familles de produits peuvent disposer de leurs propres minimums. Par e
 
 ```text
 Visiteur
-  -> Next.js / formulaire de devis
-  -> Supabase / PostgreSQL
-  -> n8n / e-mails et notifications
+  -> Next.js / formulaires
+  -> Route Handlers Next.js
+  -> Supabase / PostgreSQL local ou Cloud
+  -> automation_events (outbox transactionnelle)
+  -> n8n / e-mails et notifications (à connecter)
   -> Stripe / acompte de 30 % (V2)
 ```
 
-Le point d’entrée applicatif du devis est `src/app/api/quote-requests/route.ts`. Le schéma de données est défini dans `src/lib/quote-request.ts` et les validations commerciales dans `src/lib/quote-rules.ts`.
+Les points d’entrée sont `src/app/api/quote-requests/route.ts` et `src/app/api/catalogue-downloads/route.ts`. Le schéma de données est défini dans `src/lib/quote-request.ts` et les validations commerciales dans `src/lib/quote-rules.ts`.
+
+Les migrations dans `supabase/migrations/` créent `quote_requests`, `catalogue_downloads` et `automation_events`. Chaque demande et son événement d’automatisation sont enregistrés par une seule fonction SQL transactionnelle. Les tables sont protégées par RLS : aucune donnée de prospect n’est accessible avec les clés `anon` ou `authenticated`.
 
 ## Variables d’environnement
 
@@ -72,13 +81,50 @@ cp .env.example .env.local
 ```
 
 ```text
-NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+SUBMISSION_FINGERPRINT_SECRET=
 N8N_QUOTE_WEBHOOK_URL=
 ```
 
 Ne publiez jamais les clés serveur ou les secrets dans le navigateur ni dans Git.
+
+### Démarrage Supabase local
+
+Prérequis : Docker doit être démarré. Aucun compte Supabase Cloud n’est nécessaire.
+
+```bash
+npm install
+npm run supabase:start
+npm run supabase:status -- -o env
+```
+
+Copiez `.env.example` vers `.env.local`, puis reportez les valeurs locales affichées par `supabase status` pour `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY`. Générez ensuite le secret d’empreinte, uniquement pour `.env.local` :
+
+```bash
+cp .env.example .env.local
+openssl rand -hex 32
+npm run dev
+```
+
+Après une modification de migration pendant le développement local, réinitialisez la base pour la rejouer :
+
+```bash
+npm run supabase:reset
+```
+
+Supabase Studio est disponible à l’URL affichée par `npm run supabase:status`. Les clés locales générées par la CLI ne doivent jamais être copiées dans Git.
+
+### Passage vers Supabase Cloud
+
+Lorsque le compte `tech@mbpcatering.be` sera disponible :
+
+1. Créez le projet Supabase dans la région européenne adaptée, sans modifier ni réécrire les migrations locales.
+2. Authentifiez la CLI, liez le projet puis appliquez uniquement les migrations versionnées avec `npm run supabase:db-push`.
+3. Dans Vercel, renseignez `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` et `SUBMISSION_FINGERPRINT_SECRET` pour les environnements Preview et Production.
+4. Ne préfixez jamais `SUPABASE_SERVICE_ROLE_KEY` ou `SUBMISSION_FINGERPRINT_SECRET` par `NEXT_PUBLIC_`.
+5. Vérifiez les politiques RLS et testez les deux endpoints sur Preview avant d’activer n8n ou de modifier le DNS de `mbpcatering.be`.
 
 ## Catalogue
 
@@ -86,7 +132,6 @@ Le catalogue 2026-2027 reste la référence commerciale de MBP. Le site en propo
 
 ## Prochaines étapes
 
-1. Connecter le formulaire à une table `quote_requests` dans Supabase.
-2. Déclencher les confirmations client et notifications MBP via n8n.
-3. Ajouter les photos, logo et contenus définitifs fournis par MBP.
-4. Préparer le paiement de l’acompte de 30 % avec Stripe en V2.
+1. Déclencher les confirmations client et notifications MBP via n8n depuis `automation_events`.
+2. Ajouter les photos, logo et contenus définitifs fournis par MBP.
+3. Préparer le paiement de l’acompte de 30 % avec Stripe en V2.
