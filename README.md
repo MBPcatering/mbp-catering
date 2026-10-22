@@ -146,3 +146,16 @@ Le catalogue 2026-2027 reste la référence commerciale de MBP. Le site en propo
 1. Déclencher les confirmations client et notifications MBP via n8n depuis `automation_events`.
 2. Ajouter les photos, logo et contenus définitifs fournis par MBP.
 3. Préparer le paiement de l’acompte de 30 % avec Stripe en V2.
+## Déploiement des automatisations n8n
+
+Les routes privées `/api/internal/automation/claim`, `/succeeded` et `/reschedule` sont déployées sur Vercel.
+
+Avant d'activer le workflow n8n, vérifier :
+
+- L'application des migrations Supabase.
+- La présence des variables d'environnement requises sur Vercel.
+- La protection des routes par `N8N_AUTOMATION_SECRET`.
+- Le bon fonctionnement des appels authentifiés.
+- Le traitement d'un événement de test de bout en bout.
+
+Ne jamais stocker les secrets dans le dépôt GitHub.
