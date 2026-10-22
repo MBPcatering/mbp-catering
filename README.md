@@ -86,9 +86,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 SUBMISSION_FINGERPRINT_SECRET=
 N8N_QUOTE_WEBHOOK_URL=
+N8N_AUTOMATION_SECRET=
 ```
 
-Ne publiez jamais les clés serveur ou les secrets dans le navigateur ni dans Git.
+Ne publiez jamais les clés serveur ou les secrets dans le navigateur ni dans Git. `N8N_AUTOMATION_SECRET` est distinct de `SUPABASE_SERVICE_ROLE_KEY` : il protège les appels n8n Cloud aux routes privées `/api/internal/automation/*` via l’en-tête `Authorization: Bearer <secret>`.
+
+### Automatisations n8n
+
+Les routes privées suivantes permettent à n8n Cloud de traiter les événements de devis réservés par les fonctions RPC Supabase :
+
+- `POST /api/internal/automation/claim` avec `{ "p_limit": 1 }` ;
+- `POST /api/internal/automation/succeeded` avec `{ "event_id": "uuid", "lock_token": "uuid" }` ;
+- `POST /api/internal/automation/reschedule` avec `{ "event_id": "uuid", "lock_token": "uuid", "error": "message" }`.
+
+Toutes les réponses utilisent `Cache-Control: no-store`. Les routes ne sont accessibles qu’avec `N8N_AUTOMATION_SECRET`; la clé `SUPABASE_SERVICE_ROLE_KEY` reste exclusivement côté serveur, n’est jamais renvoyée et ne doit jamais être préfixée par `NEXT_PUBLIC_`.
 
 ### Démarrage Supabase local
 
