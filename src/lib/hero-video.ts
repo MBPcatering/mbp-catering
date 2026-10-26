@@ -1,5 +1,5 @@
 export const heroVideo = {
-  src: "/videos/mbp-hero.mp4",
+  src: "/1026.mp4",
   fallback: "Une table MBP Catering préparée avec soin",
 } as const;
 

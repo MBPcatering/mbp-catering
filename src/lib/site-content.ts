@@ -277,7 +277,7 @@ export const detailPages: Record<
     galerie: {
       title: "Des tables faites pour se retrouver.",
       lead: "Un aperçu de l’esprit MBP : généreux, coloré, vivant.",
-      body: "Les visuels de réalisations seront enrichis avec les photos de MBP. Cette première version donne la structure d’une galerie légère et inspirante.",
+      body: "Une sélection de tables, de couleurs et de détails qui raconte l’esprit MBP Catering.",
       points: [
         "Lunchs d’entreprise",
         "Buffets",
@@ -367,7 +367,7 @@ export const detailPages: Record<
     galerie: {
       title: "Tafels om samen te komen.",
       lead: "Een blik op de MBP-sfeer: royaal, kleurrijk en levendig.",
-      body: "De realisaties worden nog aangevuld met MBP-foto’s. Deze eerste versie biedt alvast een lichte en inspirerende galerijstructuur.",
+      body: "Een selectie van tafels, kleuren en details die de sfeer van MBP Catering tot leven brengt.",
       points: [
         "Bedrijfslunches",
         "Buffetten",
@@ -457,7 +457,7 @@ export const detailPages: Record<
     galerie: {
       title: "Tables made for gathering.",
       lead: "A glimpse of the MBP spirit: generous, colourful and alive.",
-      body: "This selection will be enriched with MBP event photography. This first version already provides a light, inspiring gallery structure.",
+      body: "A selection of tables, colours and details that brings the MBP Catering spirit to life.",
       points: [
         "Corporate lunches",
         "Buffets",

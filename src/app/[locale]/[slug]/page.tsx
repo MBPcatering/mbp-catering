@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -15,6 +16,7 @@ import {
   routes,
 } from "@/lib/site-content";
 import { createPageMetadata } from "@/lib/seo";
+import { galleryImages } from "@/lib/gallery";
 
 const quoteCopy = {
   fr: {
@@ -175,6 +177,39 @@ export default async function DetailPage({
   }
 
   const page = detailPages[locale][slug as Exclude<RouteSlug, "devis">];
+
+  if (slug === "galerie") {
+    return (
+      <>
+        <SiteHeader locale={locale} />
+        <main className="gallery-page">
+          <section className="shell page-heading gallery-heading">
+            <p className="kicker">MBP Catering</p>
+            <h1>{page.title}</h1>
+            <p>{page.lead}</p>
+          </section>
+          <section className="shell gallery-grid" aria-label={page.title}>
+            {galleryImages.map((image, index) => (
+              <figure
+                className={`gallery-item gallery-item-${index + 1}`}
+                key={image.src}
+              >
+                <Image
+                  alt={image.alt}
+                  fill
+                  priority={index < 2}
+                  sizes="(max-width: 820px) 100vw, 50vw"
+                  src={image.src}
+                />
+              </figure>
+            ))}
+          </section>
+        </main>
+        <SiteFooter locale={locale} />
+      </>
+    );
+  }
+
   return (
     <>
       <SiteHeader locale={locale} />
