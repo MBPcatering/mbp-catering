@@ -11,6 +11,14 @@ type ClaimedEvent = {
   lock_token: string;
 };
 
+type ClaimedAlert = {
+  alert_type: "dead_letter" | "delivery_unknown";
+  attempts: number;
+  automation_event_id: string;
+  id: string;
+  lock_token: string;
+};
+
 describeLocal("quote request automation outbox", () => {
   const database = new Client({ connectionString: databaseUrl });
   const testFingerprint = `integration-${randomUUID()}`;
@@ -39,6 +47,7 @@ describeLocal("quote request automation outbox", () => {
   });
 
   async function seedQuoteEvent(options?: {
+    deliveryStartedAt?: string;
     lockedAt?: string;
     nextAttemptAt?: string;
     status?: "failed" | "pending" | "processing";
@@ -58,10 +67,10 @@ describeLocal("quote request automation outbox", () => {
     const event = await database.query<{ id: string }>(
       `insert into public.automation_events (
         quote_request_id, event_type, idempotency_key, source_fingerprint,
-        payload, status, next_attempt_at, locked_at, lock_token
+        payload, status, next_attempt_at, locked_at, lock_token, delivery_started_at
       ) values (
         $1, 'quote_request.created', $2, $3, '{"request":"test"}'::jsonb,
-        $4, coalesce($5::timestamptz, timezone('utc', now())), $6::timestamptz, gen_random_uuid()
+        $4, coalesce($5::timestamptz, timezone('utc', now())), $6::timestamptz, gen_random_uuid(), $7::timestamptz
       ) returning id`,
       [
         quote.rows[0].id,
@@ -70,6 +79,7 @@ describeLocal("quote request automation outbox", () => {
         options?.status ?? "pending",
         options?.nextAttemptAt ?? null,
         options?.lockedAt ?? null,
+        options?.deliveryStartedAt ?? null,
       ],
     );
 
@@ -101,6 +111,46 @@ describeLocal("quote request automation outbox", () => {
     return result.rows;
   }
 
+  async function beginDelivery(eventId: string, lockToken: string) {
+    const result = await database.query<{ started: boolean }>(
+      "select public.begin_quote_request_automation_delivery($1, $2) as started",
+      [eventId, lockToken],
+    );
+
+    return result.rows[0].started;
+  }
+
+  async function markDeliveryUnknown(
+    eventId: string,
+    lockToken: string,
+    error = "SMTP outcome could not be confirmed",
+  ) {
+    const result = await database.query<{ marked_unknown: boolean }>(
+      "select public.mark_quote_request_automation_delivery_unknown($1, $2, $3) as marked_unknown",
+      [eventId, lockToken, error],
+    );
+
+    return result.rows[0].marked_unknown;
+  }
+
+  async function alertCount(eventId: string, alertType: string) {
+    const result = await database.query<{ count: string }>(
+      "select count(*)::text as count from public.automation_alerts where automation_event_id = $1 and alert_type = $2",
+      [eventId, alertType],
+    );
+
+    return Number(result.rows[0].count);
+  }
+
+  async function claimAlerts(limit = 25) {
+    const result = await database.query<ClaimedAlert>(
+      "select * from public.claim_quote_delivery_alerts($1)",
+      [limit],
+    );
+
+    return result.rows;
+  }
+
   it("gives concurrent workers distinct quote events", async () => {
     await seedQuoteEvent();
     await seedQuoteEvent();
@@ -115,7 +165,7 @@ describeLocal("quote request automation outbox", () => {
     );
   });
 
-  it("releases an expired lock with a new token and rejects stale completion", async () => {
+  it("releases an expired pre-delivery lock with a new token and rejects stale completion", async () => {
     const eventId = await seedQuoteEvent({
       lockedAt: "2000-01-01T00:00:00Z",
       status: "processing",
@@ -135,6 +185,8 @@ describeLocal("quote request automation outbox", () => {
       [eventId, previousLock.rows[0].lock_token],
     );
     expect(staleCompletion.rows[0].succeeded).toBe(false);
+
+    expect(await beginDelivery(eventId, claimed.lock_token)).toBe(true);
 
     const completion = await database.query<{ succeeded: boolean }>(
       "select public.mark_quote_request_automation_event_succeeded($1, $2) as succeeded",
@@ -184,6 +236,180 @@ describeLocal("quote request automation outbox", () => {
     expect(retry.lock_token).not.toBe(firstClaim.lock_token);
   });
 
+  it("quarantines an expired lock after delivery started instead of reclaiming it", async () => {
+    const eventId = await seedQuoteEvent({
+      deliveryStartedAt: "2000-01-01T00:00:00Z",
+      lockedAt: "2000-01-01T00:00:00Z",
+      status: "processing",
+    });
+
+    await expect(claim(1)).resolves.toEqual([]);
+
+    const event = await database.query<{
+      delivery_unknown_at: string | null;
+      lock_token: string | null;
+      locked_at: string | null;
+      status: string;
+    }>(
+      "select status, locked_at, lock_token, delivery_unknown_at from public.automation_events where id = $1",
+      [eventId],
+    );
+
+    expect(event.rows[0]).toMatchObject({
+      lock_token: null,
+      locked_at: null,
+      status: "delivery_unknown",
+    });
+    expect(event.rows[0].delivery_unknown_at).toBeTruthy();
+    expect(await alertCount(eventId, "delivery_unknown")).toBe(1);
+  });
+
+  it("treats every error after delivery started as unknown and creates one alert", async () => {
+    const eventId = await seedQuoteEvent();
+    const [claimed] = await claim(1);
+
+    expect(await beginDelivery(eventId, claimed.lock_token)).toBe(true);
+    expect(await markDeliveryUnknown(eventId, claimed.lock_token)).toBe(true);
+    expect(await markDeliveryUnknown(eventId, claimed.lock_token)).toBe(false);
+
+    const event = await database.query<{
+      next_attempt_at: string | null;
+      status: string;
+    }>(
+      "select status, next_attempt_at from public.automation_events where id = $1",
+      [eventId],
+    );
+
+    expect(event.rows[0]).toEqual({
+      next_attempt_at: null,
+      status: "delivery_unknown",
+    });
+    expect(await alertCount(eventId, "delivery_unknown")).toBe(1);
+  });
+
+  it("moves an event to dead_letter after its eighth safely retryable failure", async () => {
+    const eventId = await seedQuoteEvent();
+
+    for (let attempt = 1; attempt <= 8; attempt += 1) {
+      const [claimed] = await claim(1);
+      expect(claimed).toMatchObject({ attempts: attempt, id: eventId });
+
+      const rescheduled = await database.query<{ rescheduled: boolean }>(
+        "select public.reschedule_quote_request_automation_event($1, $2, $3) as rescheduled",
+        [eventId, claimed.lock_token, `safe failure ${attempt}`],
+      );
+      expect(rescheduled.rows[0].rescheduled).toBe(true);
+
+      if (attempt < 8) {
+        await database.query(
+          "update public.automation_events set next_attempt_at = timezone('utc', now()) - interval '1 second' where id = $1",
+          [eventId],
+        );
+      }
+    }
+
+    const event = await database.query<{
+      dead_lettered_at: string | null;
+      next_attempt_at: string | null;
+      status: string;
+    }>(
+      "select status, next_attempt_at, dead_lettered_at from public.automation_events where id = $1",
+      [eventId],
+    );
+
+    expect(event.rows[0]).toMatchObject({
+      next_attempt_at: null,
+      status: "dead_letter",
+    });
+    expect(event.rows[0].dead_lettered_at).toBeTruthy();
+    await expect(claim(1)).resolves.toEqual([]);
+    expect(await alertCount(eventId, "dead_letter")).toBe(1);
+  });
+
+  it("returns retry_scheduled and stale dispositions from the V2 retry RPC", async () => {
+    const eventId = await seedQuoteEvent();
+    const [claimed] = await claim(1);
+
+    const retry = await database.query<{ disposition: string }>(
+      "select public.reschedule_quote_request_automation_event_v2($1, $2, $3) as disposition",
+      [eventId, claimed.lock_token, "safe retryable failure"],
+    );
+    const stale = await database.query<{ disposition: string }>(
+      "select public.reschedule_quote_request_automation_event_v2($1, $2, $3) as disposition",
+      [eventId, claimed.lock_token, "stale worker"],
+    );
+
+    expect(retry.rows[0].disposition).toBe("retry_scheduled");
+    expect(stale.rows[0].disposition).toBe("stale");
+  });
+
+  it("keeps the legacy retry RPC behind the V2 delivery-unknown safeguard", async () => {
+    const eventId = await seedQuoteEvent();
+    const [claimed] = await claim(1);
+    expect(await beginDelivery(eventId, claimed.lock_token)).toBe(true);
+
+    const result = await database.query<{ rescheduled: boolean }>(
+      "select public.reschedule_quote_request_automation_event($1, $2, $3) as rescheduled",
+      [eventId, claimed.lock_token, "legacy worker failure after SMTP started"],
+    );
+    const event = await database.query<{ status: string }>(
+      "select status from public.automation_events where id = $1",
+      [eventId],
+    );
+
+    expect(result.rows[0].rescheduled).toBe(true);
+    expect(event.rows[0].status).toBe("delivery_unknown");
+  });
+
+  it("reserves alert events concurrently and rejects stale confirmations", async () => {
+    const eventId = await seedQuoteEvent();
+    const [claimed] = await claim(1);
+    expect(await beginDelivery(eventId, claimed.lock_token)).toBe(true);
+    expect(await markDeliveryUnknown(eventId, claimed.lock_token)).toBe(true);
+
+    const [first, second] = await Promise.all([claimAlerts(1), claimAlerts(1)]);
+    const alerts = [...first, ...second];
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({
+      alert_type: "delivery_unknown",
+      automation_event_id: eventId,
+      attempts: 1,
+    });
+
+    const stale = await database.query<{ succeeded: boolean }>(
+      "select public.mark_quote_delivery_alert_succeeded($1, $2) as succeeded",
+      [alerts[0].id, randomUUID()],
+    );
+    const completed = await database.query<{ succeeded: boolean }>(
+      "select public.mark_quote_delivery_alert_succeeded($1, $2) as succeeded",
+      [alerts[0].id, alerts[0].lock_token],
+    );
+
+    expect(stale.rows[0].succeeded).toBe(false);
+    expect(completed.rows[0].succeeded).toBe(true);
+  });
+
+  it("reschedules alert delivery failures and rejects stale alert locks", async () => {
+    const eventId = await seedQuoteEvent();
+    const [claimed] = await claim(1);
+    expect(await beginDelivery(eventId, claimed.lock_token)).toBe(true);
+    expect(await markDeliveryUnknown(eventId, claimed.lock_token)).toBe(true);
+    const [alert] = await claimAlerts(1);
+
+    const rescheduled = await database.query<{ rescheduled: boolean }>(
+      "select public.reschedule_quote_delivery_alert($1, $2, $3) as rescheduled",
+      [alert.id, alert.lock_token, "notification destination unavailable"],
+    );
+    const stale = await database.query<{ rescheduled: boolean }>(
+      "select public.reschedule_quote_delivery_alert($1, $2, $3) as rescheduled",
+      [alert.id, alert.lock_token, "stale worker"],
+    );
+
+    expect(rescheduled.rows[0].rescheduled).toBe(true);
+    expect(stale.rows[0].rescheduled).toBe(false);
+  });
+
   it("does not claim catalogue events", async () => {
     await seedCatalogueEvent();
 
@@ -211,15 +437,27 @@ describeLocal("quote request automation outbox", () => {
       from pg_proc procedure
       where procedure.oid in (
         'public.claim_quote_request_automation_events(integer)'::regprocedure,
+        'public.begin_quote_request_automation_delivery(uuid, uuid)'::regprocedure,
+        'public.mark_quote_request_automation_delivery_unknown(uuid, uuid, text)'::regprocedure,
         'public.mark_quote_request_automation_event_succeeded(uuid, uuid)'::regprocedure,
-        'public.reschedule_quote_request_automation_event(uuid, uuid, text)'::regprocedure
+        'public.reschedule_quote_request_automation_event(uuid, uuid, text)'::regprocedure,
+        'public.reschedule_quote_request_automation_event_v2(uuid, uuid, text)'::regprocedure,
+        'public.claim_quote_delivery_alerts(integer)'::regprocedure,
+        'public.mark_quote_delivery_alert_succeeded(uuid, uuid)'::regprocedure,
+        'public.reschedule_quote_delivery_alert(uuid, uuid, text)'::regprocedure
       )
       order by procedure.proname`,
     );
 
-    expect(privileges.rows).toHaveLength(3);
+    expect(privileges.rows).toHaveLength(9);
     expect(privileges.rows).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({
+          function_name: "begin_quote_request_automation_delivery",
+        }),
+        expect.objectContaining({
+          function_name: "mark_quote_request_automation_delivery_unknown",
+        }),
         expect.objectContaining({
           function_name: "claim_quote_request_automation_events",
         }),
@@ -228,6 +466,18 @@ describeLocal("quote request automation outbox", () => {
         }),
         expect.objectContaining({
           function_name: "reschedule_quote_request_automation_event",
+        }),
+        expect.objectContaining({
+          function_name: "reschedule_quote_request_automation_event_v2",
+        }),
+        expect.objectContaining({
+          function_name: "claim_quote_delivery_alerts",
+        }),
+        expect.objectContaining({
+          function_name: "mark_quote_delivery_alert_succeeded",
+        }),
+        expect.objectContaining({
+          function_name: "reschedule_quote_delivery_alert",
         }),
       ]),
     );
@@ -242,5 +492,41 @@ describeLocal("quote request automation outbox", () => {
       });
       expect(procedure.search_path).toContain("search_path=public, pg_temp");
     }
+
+    const alertsPermissions = await database.query<{
+      anon_can_insert: boolean;
+      anon_can_select: boolean;
+      authenticated_can_insert: boolean;
+      authenticated_can_select: boolean;
+      rls_enabled: boolean;
+      service_role_can_insert: boolean;
+      service_role_can_select: boolean;
+      service_role_can_update: boolean;
+    }>(
+      `select
+        relation.relrowsecurity as rls_enabled,
+        has_table_privilege('anon', relation.oid, 'select') as anon_can_select,
+        has_table_privilege('anon', relation.oid, 'insert') as anon_can_insert,
+        has_table_privilege('authenticated', relation.oid, 'select') as authenticated_can_select,
+        has_table_privilege('authenticated', relation.oid, 'insert') as authenticated_can_insert,
+        has_table_privilege('service_role', relation.oid, 'select') as service_role_can_select,
+        has_table_privilege('service_role', relation.oid, 'insert') as service_role_can_insert,
+        has_table_privilege('service_role', relation.oid, 'update') as service_role_can_update
+      from pg_class relation
+      where relation.oid = 'public.automation_alerts'::regclass`,
+    );
+
+    expect(alertsPermissions.rows).toEqual([
+      {
+        anon_can_insert: false,
+        anon_can_select: false,
+        authenticated_can_insert: false,
+        authenticated_can_select: false,
+        rls_enabled: true,
+        service_role_can_insert: true,
+        service_role_can_select: true,
+        service_role_can_update: true,
+      },
+    ]);
   });
 });

@@ -117,9 +117,71 @@ describe("handleInternalAutomationRequest", () => {
     await expect(response.json()).resolves.toEqual({ succeeded: true });
   });
 
-  it("reschedules an event using its exact RPC parameters", async () => {
+  it("marks delivery as started before SMTP using its exact locked RPC parameters", async () => {
     process.env.N8N_AUTOMATION_SECRET = automationSecret;
     const client = createClient(true);
+
+    const response = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/delivery-started", {
+        event_id: eventId,
+        lock_token: lockToken,
+      }),
+      "delivery-started",
+      client,
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith("begin_quote_request_automation_delivery", {
+      p_event_id: eventId,
+      p_lock_token: lockToken,
+    });
+    await expect(response.json()).resolves.toEqual({ deliveryStarted: true });
+  });
+
+  it("exposes a stale delivery-started lock without treating it as an error", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+    const client = createClient(false);
+
+    const response = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/delivery-started", {
+        event_id: eventId,
+        lock_token: lockToken,
+      }),
+      "delivery-started",
+      client,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ deliveryStarted: false, stale: true });
+  });
+
+  it("declares an uncertain delivery using its exact locked RPC parameters", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+    const client = createClient(true);
+
+    const response = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/delivery-unknown", {
+        event_id: eventId,
+        lock_token: lockToken,
+        error: "SMTP result was not confirmed",
+      }),
+      "delivery-unknown",
+      client,
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith(
+      "mark_quote_request_automation_delivery_unknown",
+      {
+        p_event_id: eventId,
+        p_lock_token: lockToken,
+        p_error: "SMTP result was not confirmed",
+      },
+    );
+    await expect(response.json()).resolves.toEqual({ deliveryUnknown: true });
+  });
+
+  it("returns the V2 retry disposition using its exact locked RPC parameters", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+    const client = createClient("retry_scheduled");
 
     const response = await handleInternalAutomationRequest(
       createRequest("/api/internal/automation/reschedule", {
@@ -131,12 +193,125 @@ describe("handleInternalAutomationRequest", () => {
       client,
     );
 
-    expect(client.rpc).toHaveBeenCalledWith("reschedule_quote_request_automation_event", {
+    expect(client.rpc).toHaveBeenCalledWith("reschedule_quote_request_automation_event_v2", {
       p_event_id: eventId,
       p_lock_token: lockToken,
       p_error: "n8n temporary failure",
     });
-    await expect(response.json()).resolves.toEqual({ rescheduled: true });
+    await expect(response.json()).resolves.toEqual({
+      disposition: "retry_scheduled",
+      rescheduled: true,
+    });
+  });
+
+  it("exposes dead_letter and stale retry dispositions without conflating them", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+
+    const deadLetter = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/reschedule", {
+        event_id: eventId,
+        lock_token: lockToken,
+        error: "safe failure number eight",
+      }),
+      "reschedule",
+      createClient("dead_letter"),
+    );
+    const stale = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/reschedule", {
+        event_id: eventId,
+        lock_token: lockToken,
+        error: "stale worker",
+      }),
+      "reschedule",
+      createClient("stale"),
+    );
+
+    await expect(deadLetter.json()).resolves.toEqual({
+      disposition: "dead_letter",
+      rescheduled: true,
+    });
+    await expect(stale.json()).resolves.toEqual({
+      disposition: "stale",
+      rescheduled: false,
+    });
+  });
+
+  it("claims and confirms alert outbox events using their exact RPC parameters", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+    const alertId = "ca4cb092-406f-4edb-96c3-d2d7e271d4e8";
+    const alertLockToken = "d153f26e-62ae-4f97-a1a3-c7b7745ffab9";
+    const client = createClient([
+      {
+        id: alertId,
+        automation_event_id: eventId,
+        alert_type: "delivery_unknown",
+        idempotency_key: `${eventId}:delivery_unknown`,
+        payload: { automationEventId: eventId, alertType: "delivery_unknown", attempts: 1 },
+        attempts: 1,
+        lock_token: alertLockToken,
+      },
+    ]);
+
+    const claimResponse = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/alerts/claim", { p_limit: 1 }),
+      "alert-claim",
+      client,
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith("claim_quote_delivery_alerts", { p_limit: 1 });
+    await expect(claimResponse.json()).resolves.toEqual({
+      alerts: [
+        {
+          id: alertId,
+          automationEventId: eventId,
+          alertType: "delivery_unknown",
+          idempotencyKey: `${eventId}:delivery_unknown`,
+          payload: { automationEventId: eventId, alertType: "delivery_unknown", attempts: 1 },
+          attempts: 1,
+          lockToken: alertLockToken,
+        },
+      ],
+    });
+
+    const confirmationClient = createClient(true);
+    const confirmationResponse = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/alerts/succeeded", {
+        alert_id: alertId,
+        lock_token: alertLockToken,
+      }),
+      "alert-succeeded",
+      confirmationClient,
+    );
+
+    expect(confirmationClient.rpc).toHaveBeenCalledWith("mark_quote_delivery_alert_succeeded", {
+      p_alert_id: alertId,
+      p_lock_token: alertLockToken,
+    });
+    await expect(confirmationResponse.json()).resolves.toEqual({ succeeded: true });
+  });
+
+  it("reschedules alerts and exposes stale locks without invoking unrelated RPCs", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+    const alertId = "ca4cb092-406f-4edb-96c3-d2d7e271d4e8";
+    const alertLockToken = "d153f26e-62ae-4f97-a1a3-c7b7745ffab9";
+    const client = createClient(false);
+
+    const response = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/alerts/reschedule", {
+        alert_id: alertId,
+        lock_token: alertLockToken,
+        error: "notification webhook timeout",
+      }),
+      "alert-reschedule",
+      client,
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith("reschedule_quote_delivery_alert", {
+      p_alert_id: alertId,
+      p_lock_token: alertLockToken,
+      p_error: "notification webhook timeout",
+    });
+    await expect(response.json()).resolves.toEqual({ rescheduled: false, stale: true });
   });
 
   it("returns 500 without leaking database details when Supabase fails", async () => {
