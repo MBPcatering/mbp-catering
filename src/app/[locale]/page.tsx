@@ -51,12 +51,14 @@ export default async function HomePage({
           />
           {heroVideoSource && (
             <video
+              key={heroVideoSource}
               className="hero-video"
               autoPlay
               loop
               muted
               playsInline
-              preload="metadata"
+              preload="auto"
+              aria-hidden="true"
             >
               <source src={heroVideoSource} type="video/mp4" />
             </video>

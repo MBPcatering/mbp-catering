@@ -17,7 +17,7 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     offers: "Offres souhaitées",
     multiple: "(plusieurs choix possibles)",
     delivery: "Livraison",
-    deliveryText: "Votre commande est livrée à l’adresse indiquée.",
+    deliveryText: "Votre commande sera livrée à l’adresse indiquée.",
     notes: "Vos précisions",
     contacts: "Vos coordonnées",
     contactsHelp: "Nous vous répondons avec une proposition personnalisée.",
@@ -35,7 +35,7 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
     submitError:
       "Votre demande n’a pas pu être envoyée. Veuillez réessayer dans quelques instants.",
     success:
-      "Merci. Votre demande est structurée pour notre équipe et pourra bientôt être transmise à notre système de suivi.",
+      "Merci. Votre demande est traitée par notre équipe et pourra bientôt être transmise à notre système de suivi.",
     placeholder: "Rue, code postal, ville",
     notesPlaceholder:
       "Allergies, service, budget, ambiance ou toute autre information utile…",
