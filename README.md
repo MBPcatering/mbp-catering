@@ -131,6 +131,40 @@ Les corps JSON sont stricts : les identifiants et verrous sont des UUID, `p_limi
 - Après `delivery_started_at`, un timeout, une erreur SMTP incertaine ou l'expiration du verrou place l'alerte dans `delivery_unknown`. Aucun renvoi automatique n'est permis depuis `delivery_unknown` ou `dead_letter`.
 - Les états `delivery_unknown` et `dead_letter` exigent une revue et une résolution manuelles avant toute reprise éventuelle.
 
+### Monitoring indépendant — socle local non déployé
+
+Le dépôt contient un socle de monitoring local, distinct de n8n. Il n'est pas encore migré sur Supabase Cloud, déployé sur Vercel ou raccordé à Uptime Kuma.
+
+Deux workflows logiques peuvent envoyer un heartbeat minimal : `staging` et `alerts`. Une migration crée uniquement des lignes techniques avec l'heure du dernier cycle et leur état d'activation attendu ; elle ne stocke ni devis, ni adresse e-mail, ni téléphone, ni `lockToken`.
+
+- `POST /api/internal/monitoring/heartbeat` accepte uniquement `{ "workflow": "staging" | "alerts" }` et exige `Authorization: Bearer <AUTOMATION_HEARTBEAT_SECRET>`.
+- `GET /api/internal/monitoring/status` exige `Authorization: Bearer <MONITOR_SECRET>` et renvoie uniquement un état `healthy`, `warning`, `critical` ou `unknown`, ainsi que des compteurs techniques agrégés. `healthy` et `warning` répondent `200`; `critical` et `unknown` répondent `503`, afin qu'un moniteur HTTP ne traite jamais un incident comme sain.
+- Les réponses sont systématiquement `Cache-Control: no-store`. Aucun endpoint de monitoring ne doit être rendu public.
+
+Les seuils centralisés sont : heartbeat attendu toutes les 5 minutes, incident après 15 minutes sans heartbeat, traitement éligible en retard après 10 minutes et alerte de tentatives élevées à partir de 6 sur 8. Les workflows ne sont surveillés que lorsque leur ligne technique est explicitement marquée comme attendue active ; ainsi, les workflows n8n actuellement inactifs ne créent pas de faux incident.
+
+Un heartbeat absent ou incohérent, un verrou expiré, `delivery_unknown` et `dead_letter` sont renvoyés comme `critical`. Les verrous expirés sont volontairement considérés critiques : sans connaître le début effectif d'un SMTP, le monitor adopte le scénario le plus sûr.
+
+#### Configuration future d'Uptime Kuma
+
+Uptime Kuma devra être hébergé séparément de n8n et de Vercel. Il devra contrôler :
+
+1. La disponibilité publique du site ou de l'API Vercel.
+2. L'endpoint privé de statut avec `MONITOR_SECRET` transmis dans l'en-tête Authorization.
+3. La disponibilité réseau de n8n Cloud, sans lire de données d'exécution.
+
+Les notifications doivent passer par un canal distinct de n8n. Elles doivent contenir uniquement l'état global et des compteurs, jamais un payload de devis, une erreur SMTP brute ou un `lockToken`.
+
+#### Ordre de déploiement futur
+
+1. Créer une sauvegarde Supabase récente et vérifier les migrations V3 puis monitoring en dry-run.
+2. Appliquer V3, puis la migration de monitoring, sur Supabase Cloud après autorisation explicite.
+3. Déployer les routes Next.js et renseigner `AUTOMATION_HEARTBEAT_SECRET` et `MONITOR_SECRET` dans Vercel, sans préfixe `NEXT_PUBLIC_`.
+4. Configurer Uptime Kuma et vérifier les réponses `healthy`, `warning`, `critical` et `unknown` avec des données synthétiques.
+5. Marquer les workflows attendus actifs, puis ajouter leurs heartbeats n8n sans activer les workflows avant une validation distincte.
+
+Pour revenir en arrière avant activation, laisser les workflows comme non attendus actifs et retirer les routes de la version déployée suivante. Aucun workflow n8n, SMTP ou état d'outbox ne doit être modifié par le monitor.
+
 ### Démarrage Supabase local
 
 Prérequis : Docker doit être démarré. Aucun compte Supabase Cloud n’est nécessaire.

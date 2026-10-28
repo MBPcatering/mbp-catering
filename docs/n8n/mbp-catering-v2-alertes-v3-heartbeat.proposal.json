@@ -1,0 +1,138 @@
+{
+  "name": "MBP Catering - V2 ALERTES V3 + heartbeat (proposal)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "MBP Catering - V2 ALERTES",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [-1040, 0],
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 1 }] } }
+    },
+    {
+      "id": "heartbeat",
+      "name": "Monitoring Heartbeat — ALERTES",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-800, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://mbp-catering.vercel.app/api/internal/monitoring/heartbeat",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"workflow\": \"alerts\"\n}",
+        "options": { "timeout": 10000 }
+      },
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "heartbeat-accepted",
+      "name": "Monitoring Heartbeat Accepted — ALERTES",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [-560, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 4 },
+          "conditions": [{ "leftValue": "={{ $json.accepted === true }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "claim",
+      "name": "Alerts Claim",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-320, 0],
+      "parameters": { "method": "POST", "url": "https://mbp-catering.vercel.app/api/internal/automation/alerts/claim", "sendBody": true, "specifyBody": "json", "jsonBody": "{\n  \"p_limit\": 1\n}", "options": {} },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "exists",
+      "name": "Alert Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [-80, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 4 },
+          "conditions": [{ "leftValue": "={{ Array.isArray($json.alerts) && $json.alerts.length === 1 }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "started",
+      "name": "Begin Alert Delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [160, -80],
+      "parameters": { "method": "POST", "url": "https://mbp-catering.vercel.app/api/internal/automation/alerts/delivery-started", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { alert_id: $('Alerts Claim').first().json.alerts[0].id, lock_token: $('Alerts Claim').first().json.alerts[0].lockToken } }}", "options": {} },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "started-confirmed",
+      "name": "Alert Delivery Started Confirmed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [400, -80],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 4 },
+          "conditions": [{ "leftValue": "={{ $json.deliveryStarted === true }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "smtp",
+      "name": "Send Technical Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [640, -160],
+      "parameters": { "fromEmail": "CONFIGURE_IN_N8N", "toEmail": "CONFIGURE_IN_N8N", "subject": "={{ '[MBP Catering] Alerte technique — ' + $('Alerts Claim').first().json.alerts[0].alertType }}", "html": "={{ '<p>Une alerte technique nécessite une revue manuelle.</p>' }}" },
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "succeeded",
+      "name": "Alerts Succeeded",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [880, -240],
+      "parameters": { "method": "POST", "url": "https://mbp-catering.vercel.app/api/internal/automation/alerts/succeeded", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { alert_id: $('Alerts Claim').first().json.alerts[0].id, lock_token: $('Alerts Claim').first().json.alerts[0].lockToken } }}", "options": {} },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "unknown",
+      "name": "Alert Delivery Unknown",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [880, -80],
+      "parameters": { "method": "POST", "url": "https://mbp-catering.vercel.app/api/internal/automation/alerts/delivery-unknown", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { alert_id: $('Alerts Claim').first().json.alerts[0].id, lock_token: $('Alerts Claim').first().json.alerts[0].lockToken, error: String($json.error?.message || 'SMTP alert result uncertain after delivery started').slice(0, 1000) } }}", "options": {} },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    }
+  ],
+  "connections": {
+    "MBP Catering - V2 ALERTES": { "main": [[{ "node": "Monitoring Heartbeat — ALERTES", "type": "main", "index": 0 }]] },
+    "Monitoring Heartbeat — ALERTES": { "main": [[{ "node": "Monitoring Heartbeat Accepted — ALERTES", "type": "main", "index": 0 }], [{ "node": "Alerts Claim", "type": "main", "index": 0 }]] },
+    "Monitoring Heartbeat Accepted — ALERTES": { "main": [[{ "node": "Alerts Claim", "type": "main", "index": 0 }], [{ "node": "Alerts Claim", "type": "main", "index": 0 }]] },
+    "Alerts Claim": { "main": [[{ "node": "Alert Exists", "type": "main", "index": 0 }]] },
+    "Alert Exists": { "main": [[{ "node": "Begin Alert Delivery", "type": "main", "index": 0 }], []] },
+    "Begin Alert Delivery": { "main": [[{ "node": "Alert Delivery Started Confirmed", "type": "main", "index": 0 }]] },
+    "Alert Delivery Started Confirmed": { "main": [[{ "node": "Send Technical Alert", "type": "main", "index": 0 }], []] },
+    "Send Technical Alert": { "main": [[{ "node": "Alerts Succeeded", "type": "main", "index": 0 }], [{ "node": "Alert Delivery Unknown", "type": "main", "index": 0 }]] }
+  }
+}

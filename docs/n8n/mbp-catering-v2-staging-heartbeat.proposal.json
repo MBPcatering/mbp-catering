@@ -1,0 +1,202 @@
+{
+  "name": "MBP Catering - V2 STAGING + heartbeat (proposal)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "MBP Catering - V2 STAGING",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [-1120, 0],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 1 }]
+        }
+      }
+    },
+    {
+      "id": "heartbeat",
+      "name": "Monitoring Heartbeat — STAGING",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-880, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://mbp-catering.vercel.app/api/internal/monitoring/heartbeat",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"workflow\": \"staging\"\n}",
+        "options": { "timeout": 10000 }
+      },
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "heartbeat-accepted",
+      "name": "Monitoring Heartbeat Accepted — STAGING",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [-640, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 4 },
+          "conditions": [{
+            "leftValue": "={{ $json.accepted === true }}",
+            "rightValue": true,
+            "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+          }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "claim",
+      "name": "Claim Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-400, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://mbp-catering.vercel.app/api/internal/automation/claim",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"p_limit\": 1\n}",
+        "options": {}
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "exists",
+      "name": "Event Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [-160, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 4 },
+          "conditions": [{
+            "leftValue": "={{ Array.isArray($json.events) && $json.events.length === 1 }}",
+            "rightValue": true,
+            "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+          }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "started",
+      "name": "Delivery Started",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [80, -80],
+      "parameters": {
+        "method": "POST",
+        "url": "https://mbp-catering.vercel.app/api/internal/automation/delivery-started",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { event_id: $('Claim Event').first().json.events[0].id, lock_token: $('Claim Event').first().json.events[0].lockToken } }}",
+        "options": {}
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "started-confirmed",
+      "name": "Delivery Started Confirmed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [320, -80],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 4 },
+          "conditions": [{
+            "leftValue": "={{ $json.deliveryStarted === true }}",
+            "rightValue": true,
+            "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+          }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "smtp",
+      "name": "Send Quote Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [560, -160],
+      "parameters": {
+        "fromEmail": "CONFIGURE_IN_N8N",
+        "toEmail": "CONFIGURE_IN_N8N",
+        "subject": "CONFIGURE_EXISTING_STAGING_TEMPLATE",
+        "html": "CONFIGURE_EXISTING_STAGING_TEMPLATE"
+      },
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "succeeded",
+      "name": "Mark Succeeded",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [800, -240],
+      "parameters": {
+        "method": "POST",
+        "url": "https://mbp-catering.vercel.app/api/internal/automation/succeeded",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { event_id: $('Claim Event').first().json.events[0].id, lock_token: $('Claim Event').first().json.events[0].lockToken } }}",
+        "options": {}
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "unknown",
+      "name": "Delivery Unknown",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [800, -80],
+      "parameters": {
+        "method": "POST",
+        "url": "https://mbp-catering.vercel.app/api/internal/automation/delivery-unknown",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { event_id: $('Claim Event').first().json.events[0].id, lock_token: $('Claim Event').first().json.events[0].lockToken, error: String($json.error?.message || 'SMTP result uncertain after delivery started').slice(0, 1000) } }}",
+        "options": {}
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    }
+  ],
+  "connections": {
+    "MBP Catering - V2 STAGING": { "main": [[{ "node": "Monitoring Heartbeat — STAGING", "type": "main", "index": 0 }]] },
+    "Monitoring Heartbeat — STAGING": {
+      "main": [
+        [{ "node": "Monitoring Heartbeat Accepted — STAGING", "type": "main", "index": 0 }],
+        [{ "node": "Claim Event", "type": "main", "index": 0 }]
+      ]
+    },
+    "Monitoring Heartbeat Accepted — STAGING": {
+      "main": [
+        [{ "node": "Claim Event", "type": "main", "index": 0 }],
+        [{ "node": "Claim Event", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claim Event": { "main": [[{ "node": "Event Exists", "type": "main", "index": 0 }]] },
+    "Event Exists": { "main": [[{ "node": "Delivery Started", "type": "main", "index": 0 }], []] },
+    "Delivery Started": { "main": [[{ "node": "Delivery Started Confirmed", "type": "main", "index": 0 }]] },
+    "Delivery Started Confirmed": { "main": [[{ "node": "Send Quote Notification", "type": "main", "index": 0 }], []] },
+    "Send Quote Notification": {
+      "main": [
+        [{ "node": "Mark Succeeded", "type": "main", "index": 0 }],
+        [{ "node": "Delivery Unknown", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}
