@@ -1,0 +1,54 @@
+name: Automation Monitoring
+
+on:
+  schedule:
+    - cron: "2-57/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: automation-monitoring
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check production automation health
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      monitoring_outcome: ${{ steps.monitoring.outcome }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Check monitoring status
+        id: monitoring
+        continue-on-error: true
+        env:
+          MONITOR_SECRET: ${{ secrets.MONITOR_SECRET }}
+        run: node scripts/check-automation-monitoring.mjs
+
+      - name: Fail on a non-healthy monitoring result
+        if: steps.monitoring.outcome != 'success'
+        run: exit 1
+
+  incident:
+    name: Synchronize monitoring incident
+    needs: check
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Create or close the technical incident
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MONITORING_OUTCOME: ${{ needs.check.outputs.monitoring_outcome == 'success' && 'healthy' || 'unhealthy' }}
+        run: node scripts/sync-monitoring-incident.mjs
