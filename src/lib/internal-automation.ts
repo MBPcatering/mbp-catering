@@ -68,8 +68,17 @@ const retryDispositionSchema = z.enum([
   "stale",
 ]);
 
+const alertRetryDispositionSchema = z.enum([
+  "retry_scheduled",
+  "dead_letter",
+  "delivery_unknown",
+  "stale",
+]);
+
 type AutomationAction =
   | "alert-claim"
+  | "alert-delivery-started"
+  | "alert-delivery-unknown"
   | "alert-reschedule"
   | "alert-succeeded"
   | "claim"
@@ -298,23 +307,67 @@ export async function handleInternalAutomationRequest(
       return json(result.data ? { succeeded: true } : staleResult("succeeded"));
     }
 
+    if (action === "alert-delivery-started") {
+      const parsed = alertLockSchema.safeParse(body);
+
+      if (!parsed.success) {
+        return json({ error: "Invalid request body" }, 400);
+      }
+
+      const result = await supabase.rpc("begin_quote_delivery_alert_delivery", {
+        p_alert_id: parsed.data.alert_id,
+        p_lock_token: parsed.data.lock_token,
+      });
+
+      if (result.error || typeof result.data !== "boolean") {
+        return json({ error: "Internal server error" }, 500);
+      }
+
+      return json(result.data ? { deliveryStarted: true } : staleResult("deliveryStarted"));
+    }
+
+    if (action === "alert-delivery-unknown") {
+      const parsed = alertRescheduleSchema.safeParse(body);
+
+      if (!parsed.success) {
+        return json({ error: "Invalid request body" }, 400);
+      }
+
+      const result = await supabase.rpc("mark_quote_delivery_alert_delivery_unknown", {
+        p_alert_id: parsed.data.alert_id,
+        p_lock_token: parsed.data.lock_token,
+        p_error: parsed.data.error,
+      });
+
+      if (result.error || typeof result.data !== "boolean") {
+        return json({ error: "Internal server error" }, 500);
+      }
+
+      return json(result.data ? { deliveryUnknown: true } : staleResult("deliveryUnknown"));
+    }
+
     const parsed = alertRescheduleSchema.safeParse(body);
 
     if (!parsed.success) {
       return json({ error: "Invalid request body" }, 400);
     }
 
-    const result = await supabase.rpc("reschedule_quote_delivery_alert", {
+    const result = await supabase.rpc("reschedule_quote_delivery_alert_v3", {
       p_alert_id: parsed.data.alert_id,
       p_lock_token: parsed.data.lock_token,
       p_error: parsed.data.error,
     });
 
-    if (result.error || typeof result.data !== "boolean") {
+    const disposition = alertRetryDispositionSchema.safeParse(result.data);
+
+    if (result.error || !disposition.success) {
       return json({ error: "Internal server error" }, 500);
     }
 
-    return json(result.data ? { rescheduled: true } : staleResult("rescheduled"));
+    return json({
+      disposition: disposition.data,
+      rescheduled: disposition.data !== "stale",
+    });
   } catch {
     return json({ error: "Internal server error" }, 500);
   }

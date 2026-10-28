@@ -106,13 +106,17 @@ La V2 utilise une outbox transactionnelle dans Supabase. Les demandes de devis c
 5. Si le résultat SMTP est incertain après le début d’envoi, `POST /api/internal/automation/delivery-unknown` avec `{ "event_id": "uuid", "lock_token": "uuid", "error": "message" }` renvoie `{ "deliveryUnknown": true }` ou `{ "deliveryUnknown": false, "stale": true }`.
 6. Pour un échec avant SMTP, `POST /api/internal/automation/reschedule` accepte le même corps que `delivery-unknown` et renvoie `{ "disposition": "retry_scheduled|dead_letter|delivery_unknown|stale", "rescheduled": true|false }`.
 
-#### Workflow ALERTES
+#### Workflow ALERTES V3 — proposition locale non déployée
 
-Les alertes techniques sont créées de façon idempotente dans `automation_alerts` pour `delivery_unknown` et `dead_letter`.
+La V3 des alertes est implémentée et testée localement, mais la migration Supabase, les routes associées et le workflow n8n ne sont pas encore déployés. Le workflow V2 ALERTES Cloud reste inactif.
 
-1. `POST /api/internal/automation/alerts/claim` avec `{ "p_limit": 1 }` renvoie `{ "alerts": [{ "id", "automationEventId", "alertType", "idempotencyKey", "payload", "attempts", "lockToken" }] }` ou `{ "alerts": [] }`.
-2. `POST /api/internal/automation/alerts/succeeded` avec `{ "alert_id": "uuid", "lock_token": "uuid" }` renvoie `{ "succeeded": true }` ou `{ "succeeded": false, "stale": true }`.
-3. `POST /api/internal/automation/alerts/reschedule` avec `{ "alert_id": "uuid", "lock_token": "uuid", "error": "message" }` renvoie `{ "rescheduled": true }` ou `{ "rescheduled": false, "stale": true }`.
+Les alertes techniques restent idempotentes dans `automation_alerts`, avec une seule alerte par couple événement/type (`delivery_unknown` ou `dead_letter`). Leur traitement V3 suit la séquence `claim → delivery-started → SMTP → succeeded | delivery-unknown` :
+
+1. `POST /api/internal/automation/alerts/claim` avec `{ "p_limit": 1 }` réserve une alerte et renvoie `{ "alerts": [{ "id", "automationEventId", "alertType", "idempotencyKey", "payload", "attempts", "lockToken" }] }` ou `{ "alerts": [] }`.
+2. `POST /api/internal/automation/alerts/delivery-started` avec `{ "alert_id": "uuid", "lock_token": "uuid" }` doit confirmer `{ "deliveryStarted": true }` avant tout SMTP. Un résultat `false` ou `stale` bloque l'envoi.
+3. `POST /api/internal/automation/alerts/succeeded` confirme une livraison SMTP connue avec le même verrou.
+4. Après un résultat SMTP incertain, `POST /api/internal/automation/alerts/delivery-unknown` met l'alerte en quarantaine. Aucun retry automatique n'est alors autorisé.
+5. `POST /api/internal/automation/alerts/reschedule` ne traite que les erreurs certaines survenues avant SMTP et renvoie une disposition `retry_scheduled`, `dead_letter`, `delivery_unknown` ou `stale`.
 
 Les corps JSON sont stricts : les identifiants et verrous sont des UUID, `p_limit` est limité à `1` au niveau HTTP et `error` est obligatoire, non vide et limité à 1 000 caractères. Une entrée invalide renvoie `400`, une authentification absente ou invalide `401`, et une erreur de configuration ou Supabase `500` sans détail interne.
 
@@ -122,7 +126,10 @@ Les corps JSON sont stricts : les identifiants et verrous sont des UUID, `p_limi
 - Après `delivery_started_at`, tout échec ou verrou expiré devient `delivery_unknown`. Aucun renvoi automatique n’est autorisé, car SMTP ne garantit pas qu’un message non confirmé n’a pas été remis.
 - Après huit échecs confirmés avant SMTP, le devis passe à `dead_letter`; les deux états terminaux génèrent une alerte technique idempotente.
 - Les événements historiques `processing` sont considérés comme potentiellement envoyés lors de la migration et seront mis en quarantaine plutôt que renvoyés automatiquement.
-- Les alertes techniques utilisent également des verrous de dix minutes et un délai exponentiel plafonné à une heure. Elles n’ont pas encore de limite maximale de tentatives : leur destinataire doit tolérer les doublons éventuels après expiration de verrou.
+- Les alertes techniques V3 ont elles aussi un verrou de dix minutes. Toute transition vérifie strictement l'identifiant, le `lockToken` courant et la validité temporelle du verrou ; un token expiré ou obsolète est rejeté sans changement d'état.
+- Seules les erreurs certaines avant SMTP sont replanifiées, avec un backoff exponentiel plafonné à une heure. Après huit tentatives, l'alerte passe à `dead_letter`.
+- Après `delivery_started_at`, un timeout, une erreur SMTP incertaine ou l'expiration du verrou place l'alerte dans `delivery_unknown`. Aucun renvoi automatique n'est permis depuis `delivery_unknown` ou `dead_letter`.
+- Les états `delivery_unknown` et `dead_letter` exigent une revue et une résolution manuelles avant toute reprise éventuelle.
 
 ### Démarrage Supabase local
 
