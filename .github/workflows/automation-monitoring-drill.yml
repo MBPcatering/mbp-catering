@@ -1,0 +1,38 @@
+name: Automation Monitoring Notification Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Controlled notification drill action
+        required: true
+        default: incident
+        type: choice
+        options:
+          - incident
+          - recovery
+
+permissions:
+  contents: read
+
+concurrency:
+  group: automation-monitoring-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    name: Run controlled notification drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Synchronize controlled notification drill
+        env:
+          DRILL_MODE: ${{ inputs.mode }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/sync-monitoring-drill-incident.mjs
