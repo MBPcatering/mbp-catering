@@ -55,8 +55,65 @@ describe("lead persistence", () => {
 
     expect(client.rpc).toHaveBeenCalledWith("create_quote_request_with_event", {
       p_idempotency_key: context.idempotencyKey,
-      p_request: quoteRequest,
+      p_request: {
+        ...quoteRequest,
+        isUrgent: false,
+        urgentReason: null,
+      },
       p_source_fingerprint: context.sourceFingerprint,
+    });
+  });
+
+  it("persists a server-derived urgency marker with the quote request", async () => {
+    const client = clientReturning({
+      data: [
+        {
+          reference: "MBP-2026-00000002",
+          automation_event_id: "dcb21649-fc31-4816-9a41-4c9b3f35c079",
+          duplicate: false,
+        },
+      ],
+      error: null,
+    });
+
+    await persistQuoteRequest(
+      {
+        ...quoteRequest,
+        isUrgent: true,
+        urgentReason: "notice_period",
+      },
+      context,
+      client,
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith("create_quote_request_with_event", {
+      p_idempotency_key: context.idempotencyKey,
+      p_request: {
+        ...quoteRequest,
+        isUrgent: true,
+        urgentReason: "notice_period",
+      },
+      p_source_fingerprint: context.sourceFingerprint,
+    });
+  });
+
+  it("preserves the quote RPC's idempotent duplicate result", async () => {
+    const client = clientReturning({
+      data: [
+        {
+          reference: "MBP-2026-00000001",
+          automation_event_id: "27b94043-0a33-4ee2-8ccd-46216dc26444",
+          duplicate: true,
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      persistQuoteRequest(quoteRequest, context, client),
+    ).resolves.toMatchObject({
+      duplicate: true,
+      reference: "MBP-2026-00000001",
     });
   });
 

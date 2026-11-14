@@ -8,7 +8,12 @@ describe("evaluateQuoteRequest", () => {
         { requestType: "b2b", guestCount: 10, eventDate: "2026-10-06" },
         new Date("2026-10-07T10:00:00Z"),
       ),
-    ).toMatchObject({ eligible: false, reason: "past-date" });
+    ).toEqual({
+      status: "rejected",
+      eligible: false,
+      urgent: false,
+      reason: "past-date",
+    });
   });
 
   it("rejects a request below the ten-person minimum", () => {
@@ -18,16 +23,26 @@ describe("evaluateQuoteRequest", () => {
         guestCount: 8,
         eventDate: "2099-01-08",
       }),
-    ).toMatchObject({ eligible: false, reason: "minimum-guests" });
+    ).toEqual({
+      status: "rejected",
+      eligible: false,
+      urgent: false,
+      reason: "minimum-guests",
+    });
   });
 
-  it("requires at least 48 hours for a B2B request", () => {
+  it("accepts a B2B request below the notice period as urgent", () => {
     expect(
       evaluateQuoteRequest(
         { requestType: "b2b", guestCount: 12, eventDate: "2026-10-08" },
         new Date("2026-10-07T10:00:00Z"),
       ),
-    ).toMatchObject({ eligible: false, reason: "notice-period" });
+    ).toEqual({
+      status: "urgent",
+      eligible: true,
+      urgent: true,
+      reason: "notice_period",
+    });
   });
 
   it("accepts a private event booked five days ahead", () => {
@@ -36,6 +51,38 @@ describe("evaluateQuoteRequest", () => {
         { requestType: "private", guestCount: 10, eventDate: "2026-10-13" },
         new Date("2026-10-07T10:00:00Z"),
       ),
-    ).toMatchObject({ eligible: true });
+    ).toEqual({ status: "accepted", eligible: true, urgent: false });
+  });
+
+  it("accepts a B2B request exactly at the 48-hour threshold", () => {
+    expect(
+      evaluateQuoteRequest(
+        { requestType: "b2b", guestCount: 10, eventDate: "2026-10-09" },
+        new Date(2026, 9, 7, 23, 59, 59, 999),
+      ),
+    ).toEqual({ status: "accepted", eligible: true, urgent: false });
+  });
+
+  it("accepts a private request exactly at the five-day threshold", () => {
+    expect(
+      evaluateQuoteRequest(
+        { requestType: "private", guestCount: 10, eventDate: "2026-10-12" },
+        new Date(2026, 9, 7, 23, 59, 59, 999),
+      ),
+    ).toEqual({ status: "accepted", eligible: true, urgent: false });
+  });
+
+  it("marks a private request below the five-day threshold as urgent", () => {
+    expect(
+      evaluateQuoteRequest(
+        { requestType: "private", guestCount: 10, eventDate: "2026-10-11" },
+        new Date(2026, 9, 7, 23, 59, 59, 999),
+      ),
+    ).toEqual({
+      status: "urgent",
+      eligible: true,
+      urgent: true,
+      reason: "notice_period",
+    });
   });
 });

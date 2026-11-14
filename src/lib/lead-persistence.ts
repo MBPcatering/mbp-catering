@@ -3,6 +3,11 @@ import { CatalogueDownloadRequest } from "./catalogue-download";
 import { QuoteRequest } from "./quote-request";
 import { createSupabaseServerClient } from "./supabase-server";
 
+export type PersistedQuoteRequest = QuoteRequest & {
+  isUrgent?: boolean;
+  urgentReason?: "notice_period" | null;
+};
+
 type RpcResult = {
   data: unknown;
   error: { code?: string; message: string } | null;
@@ -71,7 +76,7 @@ function readPersistedSubmission(data: unknown): PersistedSubmission {
 
 async function persistSubmission(
   functionName: string,
-  request: QuoteRequest | CatalogueDownloadRequest,
+  request: PersistedQuoteRequest | CatalogueDownloadRequest,
   context: SubmissionContext,
   client = getClient(),
 ) {
@@ -93,13 +98,20 @@ async function persistSubmission(
 }
 
 export function persistQuoteRequest(
-  request: QuoteRequest,
+  request: PersistedQuoteRequest,
   context: SubmissionContext,
   client?: LeadPersistenceClient,
 ) {
+  const isUrgent =
+    request.isUrgent === true && request.urgentReason === "notice_period";
+
   return persistSubmission(
     "create_quote_request_with_event",
-    request,
+    {
+      ...request,
+      isUrgent,
+      urgentReason: isUrgent ? "notice_period" : null,
+    },
     context,
     client,
   );

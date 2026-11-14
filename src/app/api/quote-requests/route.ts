@@ -37,7 +37,12 @@ export async function POST(request: Request) {
 
   try {
     const quoteRequest = await persistQuoteRequest(
-      result.data,
+      {
+        ...result.data,
+        isUrgent: eligibility.status === "urgent",
+        urgentReason:
+          eligibility.status === "urgent" ? eligibility.reason : null,
+      },
       createSubmissionContext(request),
     );
 

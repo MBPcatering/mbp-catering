@@ -7,10 +7,18 @@ type QuoteRuleInput = {
 };
 
 export type QuoteEligibility =
-  | { eligible: true }
+  | { status: "accepted"; eligible: true; urgent: false }
   | {
+      status: "urgent";
+      eligible: true;
+      urgent: true;
+      reason: "notice_period";
+    }
+  | {
+      status: "rejected";
       eligible: false;
-      reason: "minimum-guests" | "notice-period" | "past-date";
+      urgent: false;
+      reason: "minimum-guests" | "past-date";
     };
 
 const requiredNoticeHours: Record<RequestType, number> = {
@@ -42,22 +50,37 @@ export function evaluateQuoteRequest(
   now = new Date(),
 ): QuoteEligibility {
   if (request.guestCount < 10) {
-    return { eligible: false, reason: "minimum-guests" };
+    return {
+      status: "rejected",
+      eligible: false,
+      urgent: false,
+      reason: "minimum-guests",
+    };
   }
 
   const eventDate = parseEventDate(request.eventDate);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   if (!eventDate || eventDate < today) {
-    return { eligible: false, reason: "past-date" };
+    return {
+      status: "rejected",
+      eligible: false,
+      urgent: false,
+      reason: "past-date",
+    };
   }
 
   eventDate.setHours(23, 59, 59, 999);
   const noticeHours = (eventDate.getTime() - now.getTime()) / 3_600_000;
 
   if (noticeHours < requiredNoticeHours[request.requestType]) {
-    return { eligible: false, reason: "notice-period" };
+    return {
+      status: "urgent",
+      eligible: true,
+      urgent: true,
+      reason: "notice_period",
+    };
   }
 
-  return { eligible: true };
+  return { status: "accepted", eligible: true, urgent: false };
 }

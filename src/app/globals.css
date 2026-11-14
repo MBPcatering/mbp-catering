@@ -1023,6 +1023,189 @@ textarea {
   line-height: 1.5;
   margin: 20px 0 0;
 }
+.quote-form-v3 {
+  display: grid;
+  gap: 30px;
+}
+.quote-progress {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.quote-progress button {
+  background: transparent;
+  border: 0;
+  color: #81776d;
+  cursor: default;
+  display: grid;
+  font: 600 0.68rem "DM Sans", sans-serif;
+  gap: 7px;
+  letter-spacing: 0.04em;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+.quote-progress button span {
+  align-items: center;
+  border: 1px solid #cfc3b7;
+  border-radius: 999px;
+  color: var(--ink);
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+.quote-progress .is-current button,
+.quote-progress .is-complete button {
+  color: var(--ink);
+}
+.quote-progress .is-current button span {
+  background: var(--saffron);
+  border-color: var(--saffron);
+}
+.quote-progress .is-complete button {
+  cursor: pointer;
+}
+.quote-progress .is-complete button span {
+  background: var(--sage);
+  border-color: var(--sage);
+}
+.quote-progress button:disabled {
+  opacity: 1;
+}
+.quote-step {
+  min-width: 0;
+}
+.quote-step-count {
+  color: #81776d;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  margin: 0 0 7px;
+  text-transform: uppercase;
+}
+.quote-step h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  letter-spacing: -0.04em;
+  margin: 0 0 25px;
+}
+.quote-step h2:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 4px;
+}
+.choice-grid {
+  border: 0;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+.choice-grid legend {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.choice-grid label {
+  align-items: center;
+  background: #fffdf9;
+  border: 1px solid #d8d0c6;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  min-height: 52px;
+  padding: 13px 15px;
+}
+.choice-grid label.is-selected {
+  background: var(--sage);
+  border-color: var(--olive);
+}
+.choice-grid input {
+  accent-color: var(--olive);
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 0;
+  width: auto;
+}
+.delivery-included {
+  background: var(--sage);
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 16px;
+}
+.delivery-included strong {
+  font-size: 0.82rem;
+}
+.delivery-included span {
+  font-size: 0.87rem;
+  line-height: 1.45;
+}
+.field-error {
+  color: #9c271d;
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.35;
+  margin-top: 6px;
+}
+.quote-review {
+  border-top: 1px solid rgba(45, 33, 27, 0.14);
+  margin-bottom: 24px;
+}
+.quote-review p {
+  border-bottom: 1px solid rgba(45, 33, 27, 0.14);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(125px, 0.8fr) 1.2fr;
+  line-height: 1.45;
+  margin: 0;
+  padding: 12px 0;
+}
+.quote-review strong {
+  font-size: 0.78rem;
+}
+.quote-review span {
+  font-size: 0.88rem;
+}
+.quote-navigation {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+.quote-navigation .button:last-child {
+  margin-left: auto;
+}
+.button-secondary {
+  background: transparent;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+}
+.quote-form-success {
+  text-align: center;
+}
+.quote-form-success h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 2rem;
+  margin: 0 0 14px;
+}
+@media (max-width: 620px) {
+  .quote-progress {
+    gap: 5px;
+  }
+  .quote-progress button {
+    font-size: 0;
+  }
+  .quote-progress button span {
+    font-size: 0.68rem;
+  }
+  .quote-review p {
+    gap: 4px;
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 820px) {
   .nav-wrap {
     gap: 13px;
