@@ -32,7 +32,7 @@ const monitoringSnapshotSchema = z
   .strict();
 
 export const monitoringThresholds = {
-  heartbeatMaxAgeSeconds: 15 * 60,
+  heartbeatMaxAgeSeconds: 7 * 60 * 60,
   overdueMaxAgeSeconds: 10 * 60,
   highAttempts: 6,
 } as const;

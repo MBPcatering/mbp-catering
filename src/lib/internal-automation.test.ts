@@ -1,5 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const { afterCallbacks, dispatchN8nWorker } = vi.hoisted(() => ({
+  afterCallbacks: [] as Array<() => void | Promise<void>>,
+  dispatchN8nWorker: vi.fn(),
+}));
+
+vi.mock("next/server", async () => {
+  const actual = await vi.importActual<typeof import("next/server")>("next/server");
+
+  return {
+    ...actual,
+    after: (callback: () => void | Promise<void>) => afterCallbacks.push(callback),
+  };
+});
+
+vi.mock("./n8n-dispatch", () => ({ dispatchN8nWorker }));
+
 import {
   type AutomationRpcClient,
   handleInternalAutomationRequest,
@@ -31,6 +47,8 @@ describe("handleInternalAutomationRequest", () => {
 
   afterEach(() => {
     process.env.N8N_AUTOMATION_SECRET = originalSecret;
+    afterCallbacks.length = 0;
+    vi.clearAllMocks();
   });
 
   it("claims one event with the exact RPC parameters and a no-store response", async () => {
@@ -179,6 +197,24 @@ describe("handleInternalAutomationRequest", () => {
     await expect(response.json()).resolves.toEqual({ deliveryUnknown: true });
   });
 
+  it("schedules an alerts wake-up only after a staging delivery becomes unknown", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+
+    await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/delivery-unknown", {
+        event_id: eventId,
+        lock_token: lockToken,
+        error: "SMTP result was not confirmed",
+      }),
+      "delivery-unknown",
+      createClient(true),
+    );
+
+    expect(afterCallbacks).toHaveLength(1);
+    await afterCallbacks[0]();
+    expect(dispatchN8nWorker).toHaveBeenCalledWith("alerts");
+  });
+
   it("returns the V2 retry disposition using its exact locked RPC parameters", async () => {
     process.env.N8N_AUTOMATION_SECRET = automationSecret;
     const client = createClient("retry_scheduled");
@@ -234,6 +270,24 @@ describe("handleInternalAutomationRequest", () => {
       disposition: "stale",
       rescheduled: false,
     });
+  });
+
+  it("schedules an alerts wake-up when a pre-delivery failure becomes dead_letter", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+
+    await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/reschedule", {
+        event_id: eventId,
+        lock_token: lockToken,
+        error: "safe failure number eight",
+      }),
+      "reschedule",
+      createClient("dead_letter"),
+    );
+
+    expect(afterCallbacks).toHaveLength(1);
+    await afterCallbacks[0]();
+    expect(dispatchN8nWorker).toHaveBeenCalledWith("alerts");
   });
 
   it("claims and confirms alert outbox events using their exact RPC parameters", async () => {
@@ -364,6 +418,7 @@ describe("handleInternalAutomationRequest", () => {
       },
     );
     await expect(response.json()).resolves.toEqual({ deliveryUnknown: true });
+    expect(afterCallbacks).toHaveLength(0);
   });
 
   it("returns stale alert transitions and rejects malformed alert delivery requests", async () => {

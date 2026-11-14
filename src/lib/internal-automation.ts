@@ -2,9 +2,10 @@ import "server-only";
 
 import { timingSafeEqual } from "node:crypto";
 
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { dispatchN8nWorker } from "./n8n-dispatch";
 import { createSupabaseServerClient } from "./supabase-server";
 
 const responseHeaders = {
@@ -232,6 +233,10 @@ export async function handleInternalAutomationRequest(
         return json({ error: "Internal server error" }, 500);
       }
 
+      if (result.data) {
+        after(() => dispatchN8nWorker("alerts"));
+      }
+
       return json(result.data ? { deliveryUnknown: true } : staleResult("deliveryUnknown"));
     }
 
@@ -251,6 +256,13 @@ export async function handleInternalAutomationRequest(
 
       if (result.error || !disposition.success) {
         return json({ error: "Internal server error" }, 500);
+      }
+
+      if (
+        disposition.data === "delivery_unknown" ||
+        disposition.data === "dead_letter"
+      ) {
+        after(() => dispatchN8nWorker("alerts"));
       }
 
       return json({

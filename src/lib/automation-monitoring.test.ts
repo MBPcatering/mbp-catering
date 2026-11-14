@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   handleMonitoringHeartbeat,
   handleMonitoringStatus,
+  monitoringThresholds,
 } from "./automation-monitoring";
 
 const heartbeatSecret = "test-heartbeat-secret";
@@ -48,6 +49,10 @@ describe("automation monitoring routes", () => {
   afterEach(() => {
     process.env.AUTOMATION_HEARTBEAT_SECRET = originalHeartbeatSecret;
     process.env.MONITOR_SECRET = originalMonitorSecret;
+  });
+
+  it("allows a six-hour recovery cycle before a heartbeat becomes stale", () => {
+    expect(monitoringThresholds.heartbeatMaxAgeSeconds).toBe(7 * 60 * 60);
   });
 
   it("rejects a heartbeat without the separate heartbeat secret", async () => {

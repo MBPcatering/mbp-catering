@@ -4,10 +4,26 @@ const { persistQuoteRequest } = vi.hoisted(() => ({
   persistQuoteRequest: vi.fn(),
 }));
 
+const { afterCallbacks, dispatchN8nWorker } = vi.hoisted(() => ({
+  afterCallbacks: [] as Array<() => void | Promise<void>>,
+  dispatchN8nWorker: vi.fn(),
+}));
+
+vi.mock("next/server", async () => {
+  const actual = await vi.importActual<typeof import("next/server")>("next/server");
+
+  return {
+    ...actual,
+    after: (callback: () => void | Promise<void>) => afterCallbacks.push(callback),
+  };
+});
+
 vi.mock("@/lib/lead-persistence", () => ({
   persistQuoteRequest,
   SubmissionPersistenceError: class SubmissionPersistenceError extends Error {},
 }));
+
+vi.mock("@/lib/n8n-dispatch", () => ({ dispatchN8nWorker }));
 
 import { POST } from "./route";
 
@@ -45,11 +61,15 @@ describe("POST /api/quote-requests", () => {
     process.env.SUBMISSION_FINGERPRINT_SECRET = "test-fingerprint-secret";
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-07T10:00:00Z"));
-    persistQuoteRequest.mockResolvedValue({ reference: "MBP-2026-00000001" });
+    persistQuoteRequest.mockResolvedValue({
+      reference: "MBP-2026-00000001",
+      duplicate: false,
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    afterCallbacks.length = 0;
     vi.clearAllMocks();
   });
 
@@ -61,6 +81,30 @@ describe("POST /api/quote-requests", () => {
       expect.objectContaining({ isUrgent: false, urgentReason: null }),
       expect.any(Object),
     );
+  });
+
+  it("schedules a staging wake-up after an original request has been persisted", async () => {
+    const response = await postQuote(validRequest);
+
+    expect(response.status).toBe(201);
+    expect(dispatchN8nWorker).not.toHaveBeenCalled();
+    expect(afterCallbacks).toHaveLength(1);
+
+    await afterCallbacks[0]();
+
+    expect(dispatchN8nWorker).toHaveBeenCalledWith("staging");
+  });
+
+  it("does not schedule a second wake-up for an idempotent duplicate", async () => {
+    persistQuoteRequest.mockResolvedValueOnce({
+      reference: "MBP-2026-00000001",
+      duplicate: true,
+    });
+
+    const response = await postQuote(validRequest);
+
+    expect(response.status).toBe(201);
+    expect(afterCallbacks).toHaveLength(0);
   });
 
   it("derives notice-period urgency on the server", async () => {

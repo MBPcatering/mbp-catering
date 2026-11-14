@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import {
   persistQuoteRequest,
   SubmissionPersistenceError,
 } from "@/lib/lead-persistence";
 import { quoteRequestSchema } from "@/lib/quote-request";
+import { dispatchN8nWorker } from "@/lib/n8n-dispatch";
 import { evaluateQuoteRequest } from "@/lib/quote-rules";
 import {
   createSubmissionContext,
@@ -45,6 +46,10 @@ export async function POST(request: Request) {
       },
       createSubmissionContext(request),
     );
+
+    if (!quoteRequest.duplicate) {
+      after(() => dispatchN8nWorker("staging"));
+    }
 
     return NextResponse.json(
       { reference: quoteRequest.reference },
