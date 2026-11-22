@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migration = readFileSync(
-  resolve(__dirname, "20261122150000_add_quote_request_receipts.sql"),
+  resolve(__dirname, "20261122162058_add_quote_request_receipts.sql"),
   "utf8",
 );
 

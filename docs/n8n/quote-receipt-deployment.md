@@ -8,7 +8,7 @@ Les modèles FR, NL et EN confirment uniquement la réception, donnent la réfé
 
 ## Préparation Cloud requise
 
-1. Appliquer la migration `20261122150000_add_quote_request_receipts.sql` après sauvegarde et vérification de l’historique.
+1. Appliquer la migration `20261122162058_add_quote_request_receipts.sql` après sauvegarde et vérification de l’historique.
 2. Déployer le code avec `QUOTE_RECEIPT_EMAIL_ENABLED` absent ou `false`.
 3. Importer le workflow inactif ; associer `MBP - Automation V3` aux quatre appels HTTP (`claim`, `delivery-started`, `succeeded` et `delivery-unknown`) et `SMTP account` au nœud SMTP.
 4. Créer un credential Header Auth entrant dédié au webhook d’accusé. Ne pas réutiliser les secrets STAGING, ALERTES ou `N8N_AUTOMATION_SECRET`.
