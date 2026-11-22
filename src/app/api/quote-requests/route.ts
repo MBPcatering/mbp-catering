@@ -4,6 +4,7 @@ import {
   SubmissionPersistenceError,
 } from "@/lib/lead-persistence";
 import { quoteRequestSchema } from "@/lib/quote-request";
+import { isQuoteReceiptEmailEnabled } from "@/lib/quote-receipt";
 import { dispatchN8nWorker } from "@/lib/n8n-dispatch";
 import { evaluateQuoteRequest } from "@/lib/quote-rules";
 import {
@@ -37,22 +38,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: eligibility.reason }, { status: 422 });
 
   try {
+    const receiptEmailEnabled = isQuoteReceiptEmailEnabled();
     const quoteRequest = await persistQuoteRequest(
       {
         ...result.data,
         isUrgent: eligibility.status === "urgent",
         urgentReason:
           eligibility.status === "urgent" ? eligibility.reason : null,
+        receiptEnabled: receiptEmailEnabled,
       },
       createSubmissionContext(request),
     );
 
     if (!quoteRequest.duplicate) {
-      after(() => dispatchN8nWorker("staging"));
+      after(async () => {
+        await Promise.allSettled([
+          dispatchN8nWorker("staging"),
+          ...(receiptEmailEnabled ? [dispatchN8nWorker("receipt")] : []),
+        ]);
+      });
     }
 
     return NextResponse.json(
-      { reference: quoteRequest.reference },
+      { reference: quoteRequest.reference, receiptEmailEnabled },
       { status: 201 },
     );
   } catch (error) {

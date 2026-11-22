@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "./supabase-server";
 export type PersistedQuoteRequest = QuoteRequest & {
   isUrgent?: boolean;
   urgentReason?: "notice_period" | null;
+  receiptEnabled?: boolean;
 };
 
 type RpcResult = {
@@ -111,6 +112,7 @@ export function persistQuoteRequest(
       ...request,
       isUrgent,
       urgentReason: isUrgent ? "notice_period" : null,
+      receiptEnabled: request.receiptEnabled === true,
     },
     context,
     client,

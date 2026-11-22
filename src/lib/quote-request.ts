@@ -16,6 +16,7 @@ const quoteRequestBaseSchema = z.object({
   company: z.string().optional(),
   phone: z.string().min(6),
   email: z.string().email(),
+  locale: z.enum(["fr", "nl", "en"]).optional().default("fr"),
   consent: z.literal(true),
 });
 

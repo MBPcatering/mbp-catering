@@ -87,6 +87,22 @@ describe("handleInternalAutomationRequest", () => {
     });
   });
 
+  it("claims receipt events through their isolated RPC", async () => {
+    process.env.N8N_AUTOMATION_SECRET = automationSecret;
+    const client = createClient([]);
+
+    const response = await handleInternalAutomationRequest(
+      createRequest("/api/internal/automation/receipts/claim", { p_limit: 1 }),
+      "receipt-claim",
+      client,
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith("claim_quote_request_receipt_events", {
+      p_limit: 1,
+    });
+    await expect(response.json()).resolves.toEqual({ events: [] });
+  });
+
   it("rejects requests without a valid bearer secret before invoking Supabase", async () => {
     process.env.N8N_AUTOMATION_SECRET = automationSecret;
     const client = createClient([]);

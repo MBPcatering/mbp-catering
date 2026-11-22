@@ -71,14 +71,35 @@ describe("POST /api/quote-requests", () => {
     vi.useRealTimers();
     afterCallbacks.length = 0;
     vi.clearAllMocks();
+    delete process.env.QUOTE_RECEIPT_EMAIL_ENABLED;
   });
 
   it("persists a normal request without urgency", async () => {
     const response = await postQuote(validRequest);
 
     expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({
+      reference: "MBP-2026-00000001",
+      receiptEmailEnabled: false,
+    });
     expect(persistQuoteRequest).toHaveBeenCalledWith(
       expect.objectContaining({ isUrgent: false, urgentReason: null }),
+      expect.any(Object),
+    );
+  });
+
+  it("keeps the receipt disabled when its server flag is explicitly false", async () => {
+    process.env.QUOTE_RECEIPT_EMAIL_ENABLED = "false";
+
+    const response = await postQuote(validRequest);
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({
+      reference: "MBP-2026-00000001",
+      receiptEmailEnabled: false,
+    });
+    expect(persistQuoteRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ receiptEnabled: false }),
       expect.any(Object),
     );
   });
@@ -93,6 +114,28 @@ describe("POST /api/quote-requests", () => {
     await afterCallbacks[0]();
 
     expect(dispatchN8nWorker).toHaveBeenCalledWith("staging");
+  });
+
+  it("creates and wakes a receipt only when its server-side flag is enabled", async () => {
+    process.env.QUOTE_RECEIPT_EMAIL_ENABLED = "true";
+
+    const response = await postQuote({ ...validRequest, locale: "nl" });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({
+      reference: "MBP-2026-00000001",
+      receiptEmailEnabled: true,
+    });
+    expect(persistQuoteRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ locale: "nl", receiptEnabled: true }),
+      expect.any(Object),
+    );
+    expect(afterCallbacks).toHaveLength(1);
+
+    await afterCallbacks[0]();
+
+    expect(dispatchN8nWorker).toHaveBeenNthCalledWith(1, "staging");
+    expect(dispatchN8nWorker).toHaveBeenNthCalledWith(2, "receipt");
   });
 
   it("does not schedule a second wake-up for an idempotent duplicate", async () => {

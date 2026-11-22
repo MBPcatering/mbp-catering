@@ -40,6 +40,8 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
     {},
   );
   const [submitted, setSubmitted] = useState(false);
+  const [reference, setReference] = useState<string | null>(null);
+  const [receiptEmailEnabled, setReceiptEmailEnabled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
@@ -115,10 +117,20 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey.current,
         },
-        body: JSON.stringify(prepareQuoteRequestPayload(draft)),
+        body: JSON.stringify({ ...prepareQuoteRequestPayload(draft), locale }),
       });
 
-      if (getQuoteSubmissionResult(response.ok).status === "success") {
+      const submission = await response.json().catch(() => null);
+      if (
+        getQuoteSubmissionResult(response.ok).status === "success" &&
+        submission &&
+        typeof submission === "object" &&
+        typeof (submission as { reference?: unknown }).reference === "string"
+      ) {
+        setReference((submission as { reference: string }).reference);
+        setReceiptEmailEnabled(
+          (submission as { receiptEmailEnabled?: unknown }).receiptEmailEnabled === true,
+        );
         setSubmitted(true);
       } else {
         setSubmissionError(true);
@@ -152,6 +164,12 @@ export function QuoteForm({ locale = "fr" }: { locale?: Locale }) {
       <div className="quote-form quote-form-success" aria-live="polite">
         <h2>{text.thankYou}</h2>
         <p className="success-message">{text.success}</p>
+        {reference && (
+          <p className="success-reference">
+            {text.reference.replace("{reference}", reference)}
+          </p>
+        )}
+        {receiptEmailEnabled && <p>{text.receiptEmailEnabled}</p>}
       </div>
     );
   }

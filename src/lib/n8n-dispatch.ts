@@ -1,6 +1,6 @@
 import "server-only";
 
-export type AutomationWorker = "staging" | "alerts";
+export type AutomationWorker = "staging" | "alerts" | "receipt";
 export type DispatchResult = "dispatched" | "failed" | "skipped";
 
 type Fetcher = (
@@ -20,15 +20,24 @@ function configurationFor(
   worker: AutomationWorker,
   env: Record<string, string | undefined>,
 ) {
-  return worker === "staging"
-    ? {
+  if (worker === "staging") {
+    return {
         secret: env.N8N_STAGING_WEBHOOK_SECRET,
         url: env.N8N_STAGING_WEBHOOK_URL,
-      }
-    : {
+    };
+  }
+
+  if (worker === "alerts") {
+    return {
         secret: env.N8N_ALERTS_WEBHOOK_SECRET,
         url: env.N8N_ALERTS_WEBHOOK_URL,
-      };
+    };
+  }
+
+  return {
+    secret: env.N8N_RECEIPT_WEBHOOK_SECRET,
+    url: env.N8N_RECEIPT_WEBHOOK_URL,
+  };
 }
 
 function isProductionN8nWebhook(url: string) {
@@ -52,14 +61,15 @@ function usesDedicatedSecret(
   secret: string,
   env: Record<string, string | undefined>,
 ) {
-  const otherWorkerSecret =
-    worker === "staging"
-      ? env.N8N_ALERTS_WEBHOOK_SECRET
-      : env.N8N_STAGING_WEBHOOK_SECRET;
+  const otherWorkerSecrets = [
+    worker === "staging" ? undefined : env.N8N_STAGING_WEBHOOK_SECRET,
+    worker === "alerts" ? undefined : env.N8N_ALERTS_WEBHOOK_SECRET,
+    worker === "receipt" ? undefined : env.N8N_RECEIPT_WEBHOOK_SECRET,
+  ];
 
   return (
     secret !== env.N8N_AUTOMATION_SECRET &&
-    secret !== otherWorkerSecret
+    !otherWorkerSecrets.includes(secret)
   );
 }
 

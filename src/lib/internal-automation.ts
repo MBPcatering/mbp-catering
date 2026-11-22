@@ -86,6 +86,11 @@ type AutomationAction =
   | "delivery-started"
   | "delivery-unknown"
   | "reschedule"
+  | "receipt-claim"
+  | "receipt-delivery-started"
+  | "receipt-delivery-unknown"
+  | "receipt-reschedule"
+  | "receipt-succeeded"
   | "succeeded";
 
 type RpcResult = {
@@ -146,16 +151,21 @@ export async function handleInternalAutomationRequest(
     const body = await parseBody(request);
     const supabase = client ?? createSupabaseServerClient();
 
-    if (action === "claim") {
+    if (action === "claim" || action === "receipt-claim") {
       const parsed = claimSchema.safeParse(body);
 
       if (!parsed.success) {
         return json({ error: "Invalid request body" }, 400);
       }
 
-      const result = await supabase.rpc("claim_quote_request_automation_events", {
+      const result = await supabase.rpc(
+        action === "receipt-claim"
+          ? "claim_quote_request_receipt_events"
+          : "claim_quote_request_automation_events",
+        {
         p_limit: parsed.data.p_limit,
-      });
+        },
+      );
 
       if (result.error) {
         return json({ error: "Internal server error" }, 500);
@@ -178,17 +188,22 @@ export async function handleInternalAutomationRequest(
       });
     }
 
-    if (action === "succeeded") {
+    if (action === "succeeded" || action === "receipt-succeeded") {
       const parsed = eventLockSchema.safeParse(body);
 
       if (!parsed.success) {
         return json({ error: "Invalid request body" }, 400);
       }
 
-      const result = await supabase.rpc("mark_quote_request_automation_event_succeeded", {
+      const result = await supabase.rpc(
+        action === "receipt-succeeded"
+          ? "mark_quote_request_receipt_event_succeeded"
+          : "mark_quote_request_automation_event_succeeded",
+        {
         p_event_id: parsed.data.event_id,
         p_lock_token: parsed.data.lock_token,
-      });
+        },
+      );
 
       if (result.error || typeof result.data !== "boolean") {
         return json({ error: "Internal server error" }, 500);
@@ -197,17 +212,22 @@ export async function handleInternalAutomationRequest(
       return json({ succeeded: result.data });
     }
 
-    if (action === "delivery-started") {
+    if (action === "delivery-started" || action === "receipt-delivery-started") {
       const parsed = eventLockSchema.safeParse(body);
 
       if (!parsed.success) {
         return json({ error: "Invalid request body" }, 400);
       }
 
-      const result = await supabase.rpc("begin_quote_request_automation_delivery", {
+      const result = await supabase.rpc(
+        action === "receipt-delivery-started"
+          ? "begin_quote_request_receipt_delivery"
+          : "begin_quote_request_automation_delivery",
+        {
         p_event_id: parsed.data.event_id,
         p_lock_token: parsed.data.lock_token,
-      });
+        },
+      );
 
       if (result.error || typeof result.data !== "boolean") {
         return json({ error: "Internal server error" }, 500);
@@ -216,18 +236,23 @@ export async function handleInternalAutomationRequest(
       return json(result.data ? { deliveryStarted: true } : staleResult("deliveryStarted"));
     }
 
-    if (action === "delivery-unknown") {
+    if (action === "delivery-unknown" || action === "receipt-delivery-unknown") {
       const parsed = deliveryUnknownSchema.safeParse(body);
 
       if (!parsed.success) {
         return json({ error: "Invalid request body" }, 400);
       }
 
-      const result = await supabase.rpc("mark_quote_request_automation_delivery_unknown", {
+      const result = await supabase.rpc(
+        action === "receipt-delivery-unknown"
+          ? "mark_quote_request_receipt_delivery_unknown"
+          : "mark_quote_request_automation_delivery_unknown",
+        {
         p_event_id: parsed.data.event_id,
         p_lock_token: parsed.data.lock_token,
         p_error: parsed.data.error,
-      });
+        },
+      );
 
       if (result.error || typeof result.data !== "boolean") {
         return json({ error: "Internal server error" }, 500);
@@ -240,18 +265,23 @@ export async function handleInternalAutomationRequest(
       return json(result.data ? { deliveryUnknown: true } : staleResult("deliveryUnknown"));
     }
 
-    if (action === "reschedule") {
+    if (action === "reschedule" || action === "receipt-reschedule") {
       const parsed = deliveryUnknownSchema.safeParse(body);
 
       if (!parsed.success) {
         return json({ error: "Invalid request body" }, 400);
       }
 
-      const result = await supabase.rpc("reschedule_quote_request_automation_event_v2", {
+      const result = await supabase.rpc(
+        action === "receipt-reschedule"
+          ? "reschedule_quote_request_receipt_event"
+          : "reschedule_quote_request_automation_event_v2",
+        {
         p_event_id: parsed.data.event_id,
         p_lock_token: parsed.data.lock_token,
         p_error: parsed.data.error,
-      });
+        },
+      );
       const disposition = retryDispositionSchema.safeParse(result.data);
 
       if (result.error || !disposition.success) {

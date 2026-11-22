@@ -59,6 +59,7 @@ describe("lead persistence", () => {
         ...quoteRequest,
         isUrgent: false,
         urgentReason: null,
+        receiptEnabled: false,
       },
       p_source_fingerprint: context.sourceFingerprint,
     });
@@ -81,6 +82,7 @@ describe("lead persistence", () => {
         ...quoteRequest,
         isUrgent: true,
         urgentReason: "notice_period",
+        receiptEnabled: false,
       },
       context,
       client,
@@ -92,9 +94,26 @@ describe("lead persistence", () => {
         ...quoteRequest,
         isUrgent: true,
         urgentReason: "notice_period",
+        receiptEnabled: false,
       },
       p_source_fingerprint: context.sourceFingerprint,
     });
+  });
+
+  it("forwards the server-only receipt flag to the atomic quote RPC", async () => {
+    const client = clientReturning({
+      data: [{ reference: "MBP-2026-00000003", automation_event_id: "57db73af-94e6-472d-b1dc-d6895b49d388", duplicate: false }],
+      error: null,
+    });
+
+    await persistQuoteRequest({ ...quoteRequest, receiptEnabled: true }, context, client);
+
+    expect(client.rpc).toHaveBeenCalledWith(
+      "create_quote_request_with_event",
+      expect.objectContaining({
+        p_request: expect.objectContaining({ receiptEnabled: true }),
+      }),
+    );
   });
 
   it("preserves the quote RPC's idempotent duplicate result", async () => {

@@ -36,6 +36,9 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
       "Votre demande n’a pas pu être envoyée. Veuillez réessayer dans quelques instants.",
     success:
       "Merci. Votre demande est traitée par notre équipe et pourra bientôt être transmise à notre système de suivi.",
+    reference: "Référence de votre demande : {reference}",
+    receiptEmailEnabled:
+      "Un accusé de réception vous sera envoyé par e-mail.",
     placeholder: "Rue, code postal, ville",
     notesPlaceholder:
       "Allergies, service, budget, ambiance ou toute autre information utile…",
@@ -150,6 +153,9 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
       "Uw aanvraag kon niet worden verstuurd. Probeer het binnen enkele ogenblikken opnieuw.",
     success:
       "Bedankt. Uw aanvraag is voor ons team gestructureerd en kan binnenkort naar ons opvolgsysteem worden doorgestuurd.",
+    reference: "Referentie van uw aanvraag: {reference}",
+    receiptEmailEnabled:
+      "U ontvangt per e-mail een ontvangstbevestiging.",
     placeholder: "Straat, postcode, gemeente",
     notesPlaceholder:
       "Allergieën, service, budget, sfeer of andere nuttige informatie…",
@@ -265,6 +271,9 @@ export const quoteFormCopy: Record<Locale, Record<string, string>> = {
       "Your request could not be sent. Please try again in a few moments.",
     success:
       "Thank you. Your request is structured for our team and can soon be sent to our follow-up system.",
+    reference: "Your request reference: {reference}",
+    receiptEmailEnabled:
+      "You will receive an acknowledgement by email.",
     placeholder: "Street, postcode, city",
     notesPlaceholder:
       "Allergies, service, budget, atmosphere or any other useful information…",

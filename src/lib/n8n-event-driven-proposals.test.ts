@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 const proposals = [
   "mbp-catering-v3-staging-event-driven.proposal.json",
   "mbp-catering-v3-alertes-event-driven.proposal.json",
+  "mbp-catering-v3-quote-receipt-event-driven.proposal.json",
 ];
 
 type Workflow = {

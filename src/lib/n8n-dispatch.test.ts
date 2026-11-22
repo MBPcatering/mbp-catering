@@ -32,6 +32,32 @@ describe("n8n event dispatch", () => {
     expect(fetcher.mock.calls[0][1]?.body).toBeUndefined();
   });
 
+  it("uses a dedicated receipt webhook secret and no business payload", async () => {
+    const fetcher = vi.fn().mockResolvedValue({ ok: true });
+    const receiptUrl = "https://mbpcatering.app.n8n.cloud/webhook/mbp-quote-receipt";
+
+    await expect(
+      dispatchN8nWorker("receipt", {
+        env: {
+          N8N_RECEIPT_WEBHOOK_URL: receiptUrl,
+          N8N_RECEIPT_WEBHOOK_SECRET: "receipt-test-secret",
+          N8N_STAGING_WEBHOOK_SECRET: "staging-test-secret",
+          N8N_ALERTS_WEBHOOK_SECRET: "alerts-test-secret",
+        },
+        fetcher,
+      }),
+    ).resolves.toBe("dispatched");
+
+    expect(fetcher).toHaveBeenCalledWith(
+      receiptUrl,
+      expect.objectContaining({
+        method: "POST",
+        headers: { Authorization: "Bearer receipt-test-secret" },
+      }),
+    );
+    expect(fetcher.mock.calls[0][1]?.body).toBeUndefined();
+  });
+
   it("skips dispatch without a complete configuration", async () => {
     const fetcher = vi.fn();
 
